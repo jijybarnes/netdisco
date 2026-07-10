@@ -7,9 +7,9 @@ use aliased 'App::Netdisco::Worker::Status';
 use App::Netdisco::Transport::SNMP ();
 use App::Netdisco::Util::Permission qw/acl_matches acl_matches_only/;
 use App::Netdisco::Util::FastResolver 'hostnames_resolve_async';
-use App::Netdisco::Util::Device 'get_device';
+use App::Netdisco::Util::Device qw/get_device is_discoverable/;
 use App::Netdisco::Util::DNS 'hostname_from_ip';
-use App::Netdisco::Util::SNMP 'snmp_comm_reindex';
+use App::Netdisco::Util::SNMP qw/snmp_comm_reindex get_mibdirs_shortnames/;
 use App::Netdisco::Util::Web 'sort_port';
 use App::Netdisco::DB::ExplicitLocking ':modes';
 
@@ -19,6 +19,7 @@ use NetAddr::IP::Lite ':lower';
 use Storable 'dclone';
 use List::MoreUtils ();
 use JSON::PP ();
+use Path::Class qw/file dir/;
 use Encode;
 
 register_worker({ phase => 'early', driver => 'snmp',
@@ -93,8 +94,9 @@ register_worker({ phase => 'early', driver => 'snmp',
   $try_vendor =~ s/^(?:\.?1.3.6.1.4.1|enterprises)// if $try_vendor;
 
   # fix up unknown vendor (enterprise number -> organization)
-  if ((not $device->vendor or $device->vendor eq 'unknown')
-        and $try_vendor and $try_vendor =~ m/^\.(\d+)/) {
+  if ((not $device->vendor or $device->vendor eq 'unknown'
+        or $device->vendor =~ m/^${enterprises_mib}/)
+      and $try_vendor and $try_vendor =~ m/^\.(\d+)/) {
 
       my $number = $1;
       debug sprintf ' searching for Enterprise Number "%s"', $number;
@@ -106,14 +108,45 @@ register_worker({ phase => 'early', driver => 'snmp',
   }
 
   # fix up model using products OID cache
-  if ($try_vendor) {
+  if ((not $device->model or $device->model eq 'unknown'
+        or $device->model =~ m/(?:product|enterprise|1\.3\.6\.1)/i)
+      and $try_vendor) {
+
       my $oid = '.1.3.6.1.4.1' . $try_vendor;
       debug sprintf ' searching for Product ID "%s"', ('enterprises' . $try_vendor);
       my $object = schema('netdisco')->resultset('Product')->find($oid);
       if ($object) {
-          debug sprintf ' ... found Product "%s" (replaced "%s")',
+          debug sprintf ' ...found Product "%s" (replaced "%s")',
             $object->leaf, ($device->model || '');
           $device->set_column( model => $object->leaf );
+      }
+      else {
+          debug '  also searching netdisco-mibs...';
+          my $file = file((setting('mibhome') || dir(($ENV{NETDISCO_HOME} || $ENV{HOME}), 'netdisco-mibs')),
+            'EXTRAS', 'reports', 'all_leafs_only');
+          (my $target = quotemeta($try_vendor)) =~ s/^\\\.//;
+          my $leaf = `grep -E '^$target,' '$file' | cut -d, -f2`; # BACKTICKS
+          if ($leaf) {
+              chomp($leaf);
+              debug sprintf '  ...found Product "%s" (replaced "%s")',
+                $leaf, ($device->model || '');
+              $device->set_column( model => $leaf );
+          }
+      }
+  }
+
+  # remove superfluous vendor names from model names
+  if ($device->model) {
+      my @extravendors = qw/jnxProduct jnxProductName/;
+      my @vendors = sort {length($b) <=> length($a)} (@extravendors, @{ get_mibdirs_shortnames() });
+      my $vend_pat = '^(?:' . join('|', @vendors) . ')';
+      my $vend_re = qr/$vend_pat/;
+
+      (my $model = $device->model) =~ s/$vend_re//i;
+      if ($model and $model ne $device->model) {
+          debug sprintf ' fixing Product Name to be "%s" (was "%s")',
+            $model, $device->model;
+          $device->set_column( model => $model );
       }
   }
 
@@ -144,6 +177,11 @@ register_worker({ phase => 'early', driver => 'snmp',
               }
           }
       }
+  }
+
+  # check discover_no again, now that we have SNMP fields, to allow nuanced filtering
+  if (not $device->is_pseudo and not is_discoverable($device)) {
+      return $job->cancel("discover cancelled: not discoverable after retrieving device context");
   }
 
   # for existing device, filter custom_fields

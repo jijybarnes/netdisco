@@ -14,6 +14,7 @@ our @EXPORT_OK = qw/
   sort_port sort_modules
   interval_to_daterange
   sql_match
+  request_is_device
   request_is_api
   request_is_api_report
   request_is_api_search
@@ -33,6 +34,22 @@ subroutines.
 
 =head1 EXPORT_OK
 
+=head2 request_is_device
+
+Client has requested device content under C<.../device> or C<.../device/ports>.
+
+=cut
+
+sub request_is_device {
+  return (
+    index(request->path, uri_for('/device')->path) == 0
+      or
+    index(request->path, uri_for('/ajax/content/device/details')->path) == 0
+      or
+    index(request->path, uri_for('/ajax/content/device/ports')->path) == 0
+  );
+}
+
 =head2 request_is_api
 
 Client has requested JSON format data and an endpoint under C</api>.
@@ -40,12 +57,12 @@ Client has requested JSON format data and an endpoint under C</api>.
 =cut
 
 sub request_is_api {
-  return ((request->accept and request->accept =~ m/(?:json|javascript)/) and (
-    index(request->path, uri_for('/api/')->path) == 0
-      or
-    (param('return_url')
-    and index(param('return_url'), uri_for('/api/')->path) == 0)
-  ));
+  # /api/ paths are always API endpoints regardless of Accept header
+  return 1 if index(request->path, uri_for('/api/')->path) == 0;
+  # for other paths, require Accept: json and a return_url pointing to /api/
+  return ((request->accept and request->accept =~ m/(?:json|javascript)/)
+    and param('return_url')
+    and index(param('return_url'), uri_for('/api/')->path) == 0);
 }
 
 =head2 request_is_api_report

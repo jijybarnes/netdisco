@@ -3,38 +3,41 @@ name = "netdisco"
 version = "1.0.0"
 description = "Python code and dependencies for Netdisco"
 authors = [{ name = "Netdisco Developers" }]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "yamllint>=1.35.1,<2",
-    "yamale>=5.2.1,<6",
-    "netmiko>=4.4.0,<5",
-    "cryptography>=43.0.1,<44",
-    "virtualenv>=20.26.6",
-    "sqlalchemy>=2.0.37,<3",
-    "psycopg>=3.2.4,<4",
+    "yamllint>=1.38.0,<2",
+    "yamale>=6.1.0,<7",
+    "netmiko>=4.7.0,<5",
+    "cryptography>=49.0.0,<50",
+    "virtualenv>=21.6.0",
+    "sqlalchemy>=2.0.51,<3",
+    "psycopg>=3.3.4,<4",
+    "uv-build>=0.11.28,<0.12.0",
 ]
 
 [project.scripts]
 run_worklet = "netdisco.runner:main"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.28,<0.12.0"]
+build-backend = "uv_build"
 
 [dependency-groups]
-develop = ["pre-commit>=3.7.1,<4"]
-test = ["ruff>=0.5.4,<0.6"]
+develop = ["pre-commit>=4.6.0,<5"]
+test = ["ruff>=0.15.21,<0.16"]
 
 [tool.uv]
 default-groups = [
     "develop",
     "test",
 ]
+link-mode = "copy"
 
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["netdisco"]
+[tool.uv.build-backend]
+module-name = "netdisco"
+module-root = ""

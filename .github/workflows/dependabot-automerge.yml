@@ -1,0 +1,40 @@
+name: Dependabot Auto-Merge
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  # Job 1: Fetch metadata about the packages
+  check-version:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    outputs:
+      is-safe: ${{ steps.metadata.outputs.update-type != 'version-update:semver-major' }}
+    steps:
+      - name: Fetch Dependabot Metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+
+  # Job 2: Manually run test suite first
+  run-tests:
+    needs: check-version
+    if: ${{ needs.check-version.outputs.is-safe == 'true' }}
+    uses: ./.github/workflows/build-and-publish.yml # test workflow file
+
+  # Job 3: Merge once tests pass
+  merge:
+    needs: run-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve and Merge
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr review --approve "$PR_URL"
+          gh pr merge --squash "$PR_URL"

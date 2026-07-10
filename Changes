@@ -1,3 +1,366 @@
+2.101000 - 2026-07-02
+
+  [NEW FEATURES]
+
+  * #1569 new option snmp_fast_connect_timeout instead of static 200ms value
+  * #1570 NETDISCO_BACKEND_NAME env var to set shared backend identity
+  * #1577 reimplement Port Control Roles as generic Managed ACLs
+
+  [ENHANCEMENTS]
+
+  * add dividers and better order to items in admin menu
+
+  [BUG FIXES]
+
+  * #1580 fix admin pages web forms not returning properly
+  * update Python dependencies and GitHub Actions versions
+
+2.100000 - 2026-06-23
+
+  [NEW FEATURES]
+
+  * #1549 discover subaction having JSON becomes per-job additional settings
+  * #1550 add permanent API tokens and (dummy) Bearer auth support (allow_permanent_tokens)
+  * #1561 new API endpoint GET /api/v1/queue/status
+  * add queue_neighbors bool setting to allow neighbor discovery without queueing
+  * add device_auth_tag_hint discover param to select specific device_auth stanza
+  * support snmptimeout, snmpretries, bulkwalk_repeaters override in discover param
+  * add skip_neighbor_queue discover param to do same as queue_neighbors:false
+  * NETDISCO_NO_SCHEDULER environment variable same as "schedule: null"
+  * NETDISCO_WORKERS_TASKS environment variable same as "workers.tasks"
+
+  [ENHANCEMENTS]
+
+  * #1544 show the device_auth tag in the log messages
+  * #1564 improve SNMP exception reporting in job log
+  * show mode, worker count and hostname on backend startup
+
+  [BUG FIXES]
+
+  * user delete in user admin page should refresh the page
+  * update Python dependencies and GitHub Actions versions
+
+2.099006 - 2026-06-05
+
+  [ENHANCEMENTS]
+
+  * #1282 #1466 fix mis-encoded MACs 7 bytes with a leading 0x06
+
+2.099005 - 2026-05-31
+
+  [ENHANCEMENTS]
+
+  * migrate github build from qemu to matrix for multi-arch
+
+2.099004 - 2026-05-29
+
+  [BUG FIXES]
+
+  * update Python dependencies and GitHub actions cache
+
+2.099003 - 2026-05-28
+
+  [BUG FIXES]
+
+  * update Python and GitHub actions dependencies
+
+2.099002 - 2026-05-27
+
+  [BUG FIXES]
+
+  * fix to workflow file skopeo command
+
+2.099001 - 2026-05-27
+
+  [ENHANCEMENTS]
+
+  * update Python minimum version from 3.9 to 3.10
+  * new demo website links to DigitalOcean hosting
+
+  [BUG FIXES]
+
+  * update Python dependencies for security patches
+
+2.099000 - 2026-05-20
+
+  [ENHANCEMENTS]
+
+  * demo website is now deployed to DigitalOcean (was previously Heroku)
+
+  [BUG FIXES]
+
+  * update Python dependencies for security patches
+
+2.098005 - 2026-05-10
+
+  [ENHANCEMENTS]
+
+  * is_discoverable check after retrieving additional device context (SNMP fields)
+
+  [BUG FIXES]
+
+  * #1508 nested try catch for CSV to skip synthesized table view columns
+
+2.098004 - 2026-05-08
+
+  [BUG FIXES]
+
+  * #1507 errors in netdisco-web.log
+  * fix unnecessary SQL query per node when node SSID is requested
+  * some whitespace formatting in device ports template
+
+2.098003 - 2026-05-05
+
+  [ENHANCEMENTS]
+
+  * #1499 device port node display improvements
+  * #1500 skip log file redirection when running in foreground mode
+  * #1504 skip privilege drop when already running unprivileged
+
+  [BUG FIXES]
+
+  * #1497 numeric warnings when nodes list is empty in ports template
+  * #1503 Custom Fields cannot be used in External Links
+
+2.098002 - 2026-04-20
+
+  [BUG FIXES]
+
+  * #1498 fix numeric warning when job log is NULL in jobqueue template
+
+2.098001 - 2026-04-16
+
+  [BUG FIXES]
+
+  * add IO::Pty to build dependencies
+
+2.098000 - 2026-04-16
+
+  [NEW FEATURES]
+
+  * #1492 add /api/v1/statistics API endpoint
+  * #1494 /health and /metrics endpoints for monitoring or load balancing
+  * #1496 add power_modules API endpoint and add PoE info to device API endpoint
+
+  [ENHANCEMENTS]
+
+  * #1493 check parameters to Hooks to avoid errors
+  * Improve documentation for NXOS SSH collector
+
+  [BUG FIXES]
+
+  * #1484 add the device IP to scheduled Hooks
+  * require Sys::SigAction 0.24
+
+2.097003 - 2026-02-21
+
+  [ENHANCEMENTS]
+
+  * bump SNMP::Info dependency 3.975000
+
+2.097002 - 2026-01-09
+
+  [ENHANCEMENTS]
+
+  * faster search for enterprise product number in netdisco-mibs
+
+2.097001 - 2026-01-08
+
+  [ENHANCEMENTS]
+
+  * #1477 macsuck, arpnip, discover web buttons should follow is_* acls
+  * search for enterprise product number in netdisco-mibs
+  * add plain api driver type and adjust driver priorities
+  * update NetAddr::MAC dependency to 0.99
+
+  [BUG FIXES]
+
+  * #1479 error to GET /ajax/content/device/ports when subinterface without parent
+  * #1478 fixes vendor not known by netdisco
+
+2.097000 - 2025-12-16
+
+  [NEW FEATURES]
+
+  * IOS-XE: add SSH ARP (multi-VRF) and MAC collectors (replaces IOSXEMac collector)
+
+  [ENHANCEMENTS]
+
+  * #1473 get_credentials can now also open a plain file
+
+2.096001 - 2025-12-13
+
+  [ENHANCEMENTS]
+
+  * #1458 add login_banner_message setting to put text on the login page
+
+  [BUG FIXES]
+
+  * #1440 promote bare empty string to empty array if found on list custom field
+
+2.096000 - 2025-12-07
+
+  [NEW FEATURES]
+
+  * #1467 run all transports in priority order instead of only highest priority one
+
+  [BUG FIXES]
+
+  * #1462 incorrect row height in Firefox
+
+2.095006 - 2025-11-27
+
+  [BUG FIXES]
+
+  * remove netdisco-do build
+
+2.095005 - 2025-11-27
+
+  [BUG FIXES]
+
+  * #1463 avoid error when seeing two power reports for the same device port
+
+2.095004 - 2025-11-23
+
+  [ENHANCEMENTS]
+
+  * #1456 render arrays as multi-line cells in CSV exports
+
+2.095003 - 2025-11-18
+
+  [ENHANCEMENTS]
+
+  * #1427 collapse large numbers of MAC and IP addresses in device ports
+
+  [BUG FIXES]
+
+  * #1452 fix problem with accented letters in the window title
+
+2.095002 - 2025-11-16
+
+  [BUG FIXES]
+
+  * #1422 ensure known good community string always tried before config communities
+
+2.095001 - 2025-11-15
+
+  [BUG FIXES]
+
+  * upload netdisco-postgresql-13 to container repositories
+
+2.095000 - 2025-11-15
+
+  [NEW FEATURES]
+
+  * Docker Compose support now (hopefully) upgrades postgresql
+
+  [BUG FIXES]
+
+  * #1446 update IRC support links in docs
+
+2.094003 - 2025-11-03
+
+  [ENHANCEMENTS]
+
+  * #1444 Connected Nodes sort by vlan ID should be numeric
+
+  [BUG FIXES]
+
+  * couple of small undef protections
+
+2.094002 - 2025-10-25
+
+  [BUG FIXES]
+
+  * #1439 including uv.lock prevents Python subsystem installation
+
+2.094001 - 2025-10-25
+
+  [ENHANCEMENTS]
+
+  * #1326 change the window title according to branding
+  * #1429 prefer device port search before device search match
+
+  [BUG FIXES]
+
+  * #1425 check defanged_admin in new admintask for port roles
+  * #1435 schema version needs to be bumped to make 2.093001 fix be redeployed
+
+2.094000 - 2025-10-25
+
+  [NEW FEATURES]
+
+  * (testing) container images built for linux/arm64 and linux/amd64
+
+2.093001 - 2025-10-24
+
+  [BUG FIXES]
+
+  * fix typo in schema update file
+
+2.093000 - 2025-10-24
+
+  [NEW FEATURES]
+
+  * #1048 add VRF Column to Node IP table
+
+  [ENHANCEMENTS]
+
+  * set NETDISCO_DB_* environment once there is a full db config
+  * netdisco-env execs to list
+
+  [BUG FIXES]
+
+  * #1417 SSHcollector module NXOS.pm partial ARP entries collector
+  * fix bug in template for csv icon in job queue
+
+2.092002 - 2025-10-22
+
+  [BUG FIXES]
+
+  * revert other change in ACL processing from 8b912dde
+  * add netdisco-env helper script to load database connection environment
+
+2.092001 - 2025-10-21
+
+  [BUG FIXES]
+
+  * revert ce93987c to fix ACL handling
+  * #netdisco-docker/issues/87 add uv-build dependency
+
+2.092000 - 2025-10-19
+
+  [NEW FEATURES]
+
+  * #1402 #1353 portctl and roles in the database (jijybarnes)
+
+2.091001 - 2025-10-09
+
+  [ENHANCEMENTS]
+
+  * #1409 interface folding for subinterfaces
+  * #1411 scheduler takes IP Prefix in "device" param and multiple "device" params
+
+  [BUG FIXES]
+
+  * #1408 ignore SIGCHLD in perl ssh collector to avoid zombie processes
+
+2.091000 - 2025-09-30
+
+  [NEW FEATURES]
+
+  * #1404 SSH collector for Arista EOS (Robert Lynch)
+  * #1407 SSH collector for MAC entries from Cisco IOS-XE routers (alcatron)
+
+  [ENHANCEMENTS]
+
+  * #1406 Trim known vendor strings from the front of model strings
+  * update Python integration to use native uv builder (fixes netdisco-docker:#83)
+
+  [BUG FIXES]
+
+  * #1403 allow models generated by SNMP::Info to remain
+
 2.090002 - 2025-09-25
 
   [BUG FIXES]

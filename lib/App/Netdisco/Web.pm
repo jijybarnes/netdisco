@@ -14,6 +14,7 @@ use URI ();
 use Socket6 (); # to ensure dependency is met
 use HTML::Entities (); # to ensure dependency is met
 use URI::QueryParam (); # part of URI, to add helper methods
+use MIME::Base64 'encode_base64';
 use Path::Class 'dir';
 use Module::Load ();
 use Data::Visitor::Tiny;
@@ -129,6 +130,10 @@ use App::Netdisco::Web::Device;
 use App::Netdisco::Web::Report;
 use App::Netdisco::Web::API::Objects;
 use App::Netdisco::Web::API::Queue;
+use App::Netdisco::Web::API::Statistics;
+use App::Netdisco::Web::API::User;
+use App::Netdisco::Web::Health;
+use App::Netdisco::Web::Metrics;
 use App::Netdisco::Web::AdminTask;
 use App::Netdisco::Web::TypeAhead;
 use App::Netdisco::Web::PortControl;
@@ -147,6 +152,11 @@ sub _load_web_plugins {
       $plugin =~ s/^\+//;
 
       $ENV{ND2_LOG_PLUGINS} && debug "loading web plugin $plugin";
+
+      # support for loading a plugin twice
+      my $inc_file = join( '/', split /::/, $plugin ) . '.pm';
+      delete $INC{ $inc_file };
+
       Module::Load::load $plugin;
   }
 }
@@ -294,6 +304,9 @@ hook 'before_template' => sub {
 hook 'before_template' => sub {
     my $tokens = shift;
 
+    # quick b64 encode
+    $tokens->{atob} = sub { encode_base64(shift, '') };
+
     # allow portable static content
     $tokens->{uri_base} = request->base->path
       if request->base->path ne '/';
@@ -320,6 +333,7 @@ hook 'before_template' => sub {
     };
 
     # access to logged in user's roles (modulo RBAC)
+    # role will be "admin" "port_control" "radius" or "ldap"
     $tokens->{user_has_role} = sub {
         my ($role, $device) = @_;
         return false unless $role;
@@ -331,12 +345,18 @@ hook 'before_template' => sub {
         my $user = logged_in_user or return false;
         return true unless $user->portctl_role;
 
-        my $device_ip = ref $device eq 'HASH' ? $device->{ip} : $device;
-
-        my $acl = schema(vars->{'tenant'})->resultset('PortctlRoleDevice')
-          ->search({ role_name => $user->portctl_role, device_ip => $device_ip })
-          ->single;
-        return true if $acl;
+        # this has the merged yaml and database config
+        my $acl = setting('portctl_by_role')->{$user->portctl_role};
+        if ($acl and (ref $acl eq q{} or ref $acl eq ref [])) {
+            return true if acl_matches($device, $acl);
+        }
+        elsif ($acl and ref $acl eq ref {}) {
+            foreach my $key (grep { defined } keys %$acl) {
+                # lhs matches device, rhs matches port
+                # but we are not interested in the ports
+                return true if acl_matches($device, $key);
+            }
+        }
 
         # assigned an unknown role
         return false;
@@ -356,6 +376,9 @@ hook 'before_template' => sub {
             $tokens->{$sidebar_key} = uri_for("/$mode", {tab => $report});
         }
         elsif ($mode =~ m/^report$/) {
+            $tokens->{$sidebar_key} = uri_for("/$mode/$report");
+        }
+        elsif ($mode =~ m/^admintask$/) {
             $tokens->{$sidebar_key} = uri_for("/$mode/$report");
         }
 
@@ -470,7 +493,7 @@ $swagger_doc->{consumes} = 'application/json';
 $swagger_doc->{produces} = 'application/json';
 $swagger_doc->{tags} = [
   {name => 'General',
-    description => 'Log in and Log out'},
+    description => 'Log in/out and health checks'},
   {name => 'Search',
     description => 'Search Operations'},
   {name => 'Objects',

@@ -31,7 +31,8 @@ sub run {
     unless ref $job eq 'App::Netdisco::Backend::Job';
 
   $self->job($job);
-  $job->device( get_device($job->device) );
+  $job->device( get_device($job->device) )
+    unless scalar grep {$job->action eq $_} @{ setting('job_targets_prefix') };
   $self->load_workers();
 
   # clean up and finalise job status when we exit
@@ -47,7 +48,7 @@ sub run {
   my @newuserconf = ();
   my @userconf = @{ dclone (setting('device_auth') || []) };
 
-  # reduce device_auth by only/no
+  # reduce device_auth by only/no and device_auth_tag_hint
   if (ref $job->device) {
     foreach my $stanza (@userconf) {
       my $no   = (exists $stanza->{no}   ? $stanza->{no}   : undef);
@@ -57,6 +58,13 @@ sub run {
       next if $only and not acl_matches_only($job->device, $only);
 
       push @newuserconf, dclone $stanza;
+    }
+
+    # desired behaviour is that if the hint tag is missing then
+    # Netdisco will still try all tags (and not just bail out)
+    if (my $tag_hint = $job->params->{device_auth_tag_hint}) {
+        my @hint_matches = grep { $_->{tag} and $_->{tag} eq $tag_hint } @newuserconf;
+        @newuserconf = @hint_matches if scalar @hint_matches;
     }
 
     # per-device action but no device creds available

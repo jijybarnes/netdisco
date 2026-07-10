@@ -10,6 +10,7 @@ use Path::Class 'dir';
 use Net::Domain 'hostdomain';
 use AnyEvent::Loop; # avoid EV
 use File::ShareDir 'dist_dir';
+use Storable 'dclone';
 use URI::Based;
 
 BEGIN {
@@ -124,15 +125,20 @@ if (ref {} eq ref setting('database')) {
     my $default = setting('plugins')->{DBIC}->{'default'};
     if ($default->{dsn} =~ m/dbname=([^;]+)/) {
         $ENV{PGDATABASE} = $1;
+        $ENV{NETDISCO_DB_NAME} = $ENV{PGDATABASE};
     }
     if ($default->{dsn} =~ m/host=([^;]+)/) {
         $ENV{PGHOST} = $1;
+        $ENV{NETDISCO_DB_HOST} = $ENV{PGHOST};
     }
     if ($default->{dsn} =~ m/port=(\d+)/) {
         $ENV{PGPORT} = $1;
+        $ENV{NETDISCO_DB_PORT} = $ENV{PGPORT};
     }
     $ENV{PGUSER} = $default->{user};
+    $ENV{NETDISCO_DB_USER} = $ENV{PGUSER};
     $ENV{PGPASSWORD} = $default->{password};
+    $ENV{NETDISCO_DB_PASS} = $ENV{PGPASSWORD};
     $ENV{PGCLIENTENCODING} = 'UTF8';
 
     foreach my $c (@{setting('external_databases')}) {
@@ -168,6 +174,10 @@ config->{'device_auth'}
 setting('workers')->{queue} ||= 'PostgreSQL';
 if ($ENV{ND2_SINGLE_WORKER}) {
   setting('workers')->{tasks} = 1;
+  delete config->{'schedule'};
+}
+
+if ($ENV{NETDISCO_NO_SCHEDULER}) {
   delete config->{'schedule'};
 }
 
@@ -219,6 +229,11 @@ config->{'bulkwalk_off'} = true
 
 config->{'port_control_reasons'} =
   config->{'port_control_reasons'} || config->{'system_port_control_reasons'};
+
+# for managing database portctl_roles
+
+config->{'portctl_by_role_shadow'}
+  = dclone (setting('portctl_by_role') || {});
 
 # convert domain_suffix from scalar or list to regexp
 
@@ -358,6 +373,11 @@ if (exists setting('workers')->{interactives}
 
     delete setting('workers')->{pollers};
     delete setting('workers')->{interactives};
+}
+
+# allow container orchestrators to pin worker count via env (e.g. scheduler pod sets this to 0)
+if (exists $ENV{NETDISCO_WORKERS_TASKS}) {
+  setting('workers')->{tasks} = int($ENV{NETDISCO_WORKERS_TASKS});
 }
 
 # moved the timeout setting

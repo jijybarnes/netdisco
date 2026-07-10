@@ -146,6 +146,7 @@ $(document).ready(function() {
 
     if (esc) {
       $(cell).blur();
+      $(this).val("");
     }
     else if (nl) {
       event.preventDefault();
@@ -155,6 +156,18 @@ $(document).ready(function() {
           port_control(cell); // save
         });
         $('#nd_portlog').modal('show');
+      }
+      else if (td.data('field') == 'nd_left-acl-rule-field') {
+        if ($(this).val().length == 0) { return }
+        td.append('<input class="nd_left-acl-rule-field" data-form="update" name="left_rule" type="hidden" value="'+
+          Math.floor( Date.now() / 1000 ) + '.' + window.btoa($(this).val()) +'">')
+        $(this).closest('tr').find('button.nd_adminbutton[name="update"]').click();
+      }
+      else if (td.data('field') == 'nd_right-acl-rule-field') {
+        if ($(this).val().length == 0) { return }
+        td.append('<input class="nd_right-acl-rule-field" data-form="update" name="right_rule" type="hidden" value="'+
+          Math.floor( Date.now() / 1000 ) + '.' + window.btoa($(this).val()) +'">')
+        $(this).closest('tr').find('button.nd_adminbutton[name="update"]').click();
       }
       else {
         // no confirm for port descr change

@@ -16,9 +16,6 @@ sub worker_begin {
   my $self = shift;
   my $wid = $self->wid;
 
-  return debug "sch ($wid): no need for scheduler... skip begin"
-    unless setting('schedule');
-
   debug "entering Scheduler ($wid) worker_begin()";
 
   foreach my $action (keys %{ setting('schedule') }) {
@@ -46,12 +43,6 @@ sub worker_begin {
 sub worker_body {
   my $self = shift;
   my $wid = $self->wid;
-
-  unless (setting('schedule')) {
-      prctl sprintf 'nd2: #%s sched: inactive', $wid;
-      return debug "sch ($wid): no need for scheduler... quitting"
-  }
-
   my $coder = JSON::PP->new->utf8(0)->allow_nonref(1)->allow_unknown(1);
 
   while (1) {
@@ -88,19 +79,30 @@ sub worker_body {
               };
           }
           else {
-              my $net = NetAddr::IP->new($sched->{device});
-              next if ($sched->{device}
-                and (!$net or $net->num == 0 or $net->addr eq '0.0.0.0'));
+              my @hostlist = ();
 
-              my @hostlist = map { (ref $_) ? $_->addr : undef }
-                (defined $sched->{device} ? ($net->hostenum) : (undef));
+              foreach my $target (ref $sched->{device} eq ref [] ? @{ $sched->{device} }
+                                                                 : $sched->{device}) {
+                  # sanity checking
+                  my $net = NetAddr::IP->new($target);
+                  next if ($target
+                    and (!$net or $net->num == 0 or $net->addr eq '0.0.0.0'));
+
+                  if (scalar grep {$real_action eq $_} @{ setting('job_targets_prefix') }) {
+                      push @hostlist, $target;
+                  }
+                  else {
+                      @hostlist = map { (ref $_) ? $_->addr : undef }
+                        (defined $target ? ($net->hostenum) : (undef));
+                  }
+              }
 
               foreach my $host (@hostlist) {
                 push @job_specs, {
                   action => $real_action,
                   device => $host,
                   port   => $sched->{port},
-                  subaction => $sched->{extra},
+                  subaction => ($sched->{extra} || $sched->{subaction}),
                 };
               }
           }
