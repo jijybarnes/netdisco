@@ -83,6 +83,16 @@ subtest 'swagger__v2_routes__are_documented_under_their_own_tag' => sub {
   ok scalar(grep { $_->{name} eq 'Objects v2' } @{ $doc->{tags} }), 'and the tag is declared';
 };
 
+subtest 'jobsRoute__both_addresses__are_routed_and_documented' => sub {
+  route_exists [ GET => '/api/v2/me/jobs' ], 'GET /api/v2/me/jobs';
+  { local $ENV{HTTP_X_REQUESTED_WITH} = 'XMLHttpRequest';
+    route_exists [ GET => '/ajax/data/v2/me/jobs' ], 'GET /ajax/data/v2/me/jobs'; }
+  my $doc = Dancer::Plugin::Swagger->instance->doc;
+  ok $doc->{paths}{'/api/v2/me/jobs'}{get}, 'documented, with its path as the API shows it';
+  is_deeply [ map { $_->{name} } grep { ref {} eq ref $_ } @{ $doc->{paths}{'/api/v2/me/jobs'}{get}{parameters} } ],
+    ['limit'], 'with its limit parameter';
+};
+
 subtest 'deviceRoutes__both_addresses__are_routed' => sub {
   foreach my $path ('/devices/10.0.0.1', '/devices/10.0.0.1/ports',
                     '/devices/10.0.0.1/ports/Gi1/0/1', '/devices/10.0.0.1/ports/Gi1/0/1/nodes') {

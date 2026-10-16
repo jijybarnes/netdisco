@@ -47,6 +47,7 @@ $tt->process('ajax/device/ports.tt', {
   device_ip   => 'fe80::1',
   port_filter => '"><script>alert(1)</script>',
   columns     => JSON::PP->new->canonical->encode([ { name => 'c_port', label => 'Port <b>', default => JSON::PP::true } ]),
+  reasons     => JSON::PP->new->canonical->encode([ { value => 'other', label => 'Other "x"' } ]),
 }, \$shell) or die $tt->error;
 
 like $shell, qr{data-nd2-src="/nd/ajax/data/v2/devices/fe80%3A%3A1/ports"},
@@ -56,6 +57,11 @@ like $shell, qr{data-nd2-filter="&quot;&gt;&lt;script&gt;alert\(1\)&lt;/script&g
 like $shell, qr{data-nd2-columns="\[\{&quot;default&quot;:true,&quot;label&quot;:&quot;Port &lt;b&gt;&quot;},
   'portsShell__columns__json_escaped_into_its_attribute';
 is scalar(() = $shell =~ /data-chip="/g), 7, 'portsShell__chips__all_seven';
+like $shell, qr{data-nd2-api="/nd/ajax/data/v2"}, 'portsShell__api_base__under_the_site_base_for_the_drawers_nodes';
+like $shell, qr{data-nd2-device="fe80::1"}, 'portsShell__device__for_the_drawers_requests';
+is(($shell =~ m{data-nd2-reasons="([^"]*)"})[0],
+  '[{&quot;label&quot;:&quot;Other \\&quot;x\\&quot;&quot;,&quot;value&quot;:&quot;other&quot;}]',
+  'portsShell__reasons__json_escaped_into_their_attribute_a_quote_in_a_label_cannot_end_it');
 like $shell, qr{data-mode="status" aria-pressed="true"}, 'portsShell__panel__opens_on_status';
 
 my $sidebar = '';

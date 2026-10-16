@@ -9,7 +9,7 @@ use Scalar::Util 'blessed';
 
 use App::Netdisco::Web::Data qw/speed_to_bps layers_list iso8601_sql json_bool/;
 use App::Netdisco::Web::Data::Device 'normalize_device';
-use App::Netdisco::Web::Data::Ports qw/port_status normalize_port normalize_node/;
+use App::Netdisco::Web::Data::Ports qw/port_status normalize_port normalize_node normalize_control/;
 
 # The v2 shapes are the contract both the API and the modern interface read,
 # so every field is pinned here from plain column hashes: the database is not
@@ -104,8 +104,34 @@ is_deeply [ sort keys %$port ], [ sort qw/
   port descr name type ifindex mac mtu status admin_status oper_status
   error_disable_cause stp_state speed speed_bps speed_admin duplex duplex_admin
   native_vlan pvid vlans is_uplink is_master slave_of has_subinterfaces
-  last_change_at poe neighbor node_count tags custom_fields
+  last_change_at poe neighbor node_count control tags custom_fields
 / ], 'normalizePort__fields__are_the_documented_set';
+
+# ---- what the user may change ----
+
+is normalize_control(undef, 1), undef, 'normalizeControl__user_without_port_control__null_not_a_list_of_refusals';
+is $port->{control}, undef, 'normalizePort__no_control_given__control_null';
+
+sub flags { my $c = shift; return { map { $_ => ($c->{$_} ? 1 : 0) } sort keys %$c } }
+is_deeply flags(normalize_control({ service => 1, pvid => 1, name => 0 }, 1)),
+  { admin_status => 1, name => 1, native_vlan => 1, poe => 1 },
+  'normalizeControl__service_allowed__also_covers_the_name_and_poe';
+is_deeply flags(normalize_control({ service => 1, pvid => 0, name => 0 }, 0)),
+  { admin_status => 1, name => 1, native_vlan => 0, poe => 0 },
+  'normalizeControl__no_poe_row__poe_not_offered_even_when_service_is_allowed';
+is_deeply flags(normalize_control({ service => 0, pvid => 0, name => 1 }, 1)),
+  { admin_status => 0, name => 1, native_vlan => 0, poe => 0 },
+  'normalizeControl__name_only__poe_needs_the_right_to_switch_the_port';
+is_deeply flags(normalize_control({ service => 0, pvid => 1, name => 0 }, 1)),
+  { admin_status => 0, name => 0, native_vlan => 1, poe => 0 },
+  'normalizeControl__vlan_only__nothing_else_follows';
+is_deeply flags(normalize_control({}, 1)), { admin_status => 0, name => 0, native_vlan => 0, poe => 0 },
+  'normalizeControl__no_decision__everything_refused';
+
+my $ctl = normalize_port({ port => 'Gi1/0/1', poe_admin => 'true' }, { control => { service => 1 } });
+is_json_bool $ctl->{control}{poe}, 1, 'normalizePort__control_and_a_poe_row__poe_offered';
+is_json_bool normalize_port({ port => 'Gi1/0/1' }, { control => { service => 1 } })->{control}{poe}, 0,
+  'normalizePort__control_without_a_poe_row__poe_not_offered';
 
 # ---- one device ----
 
