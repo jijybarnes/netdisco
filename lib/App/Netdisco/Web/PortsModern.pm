@@ -8,7 +8,7 @@ use JSON::PP ();
 use App::Netdisco::Web::Data::Ports 'device_ports';
 
 use base 'Exporter';
-our @EXPORT_OK = qw/modern_ports_pane port_column_offer/;
+our @EXPORT_OK = qw/modern_ports_pane port_column_offer port_reasons/;
 
 =head1 NAME
 
@@ -46,6 +46,19 @@ sub port_column_offer {
   }} grep { $_->{name} } @$columns ];
 }
 
+=head2 port_reasons( \%reasons )
+
+The reasons a port change can be logged under, as C<port_control_reasons> has
+them (key and text), in the order the classic modal lists them: by key.
+
+=cut
+
+sub port_reasons {
+  my $reasons = shift;
+  return [] unless ref {} eq ref $reasons;
+  return [ map {{ value => $_, label => $reasons->{$_} }} sort keys %$reasons ];
+}
+
 sub modern_ports_pane {
   my $schema = schema(vars->{'tenant'});
   my $device = $schema->resultset('Device')->search_for_device(param('q'))
@@ -57,6 +70,7 @@ sub modern_ports_pane {
       # not 'filter': with ANYCASE that is the FILTER directive
       port_filter => scalar param('f'),
       columns   => JSON::PP->new->canonical->encode(port_column_offer(setting('port_columns'))),
+      reasons   => JSON::PP->new->canonical->encode(port_reasons(setting('port_control_reasons'))),
     }, { layout => 'noop' };
   }
 

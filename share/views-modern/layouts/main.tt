@@ -158,6 +158,19 @@
   </div>
   [% END %]
 
+  <div class="dropdown nd2-jobs" data-nd2-jobs data-nd2-src="[% uri_base | none %]/ajax/data/v2/me/jobs?limit=10">
+    <button type="button" class="nd2-topbar-btn nd2-jobs-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+      aria-expanded="false" aria-label="Jobs" title="Your jobs">
+      <i class="fas fa-list-check" aria-hidden="true"></i><span class="nd2-badge" hidden>0</span>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end nd2-jobs-menu">
+      <div class="nd2-jobs-head"><b>Your jobs</b>
+        [% IF user_has_role('admin') %]<a href="[% uri_for('/admin/jobqueue') | none %]?firstsearch=on">Whole queue</a>[% END %]
+      </div>
+      <div class="nd2-jobs-list" aria-live="polite"></div>
+    </div>
+  </div>
+
   [% INCLUDE 'layouts/_web_ui_switch.tt' target = 'classic' %]
 
   <div class="dropdown">
@@ -200,6 +213,7 @@
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-deferred-nodes.js?v=[% asset_version | none %]"></script>
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-portcontrol.js?v=[% asset_version | none %]"></script>
 <script type="module" src="[% uri_base | none %]/modern/js/shell.js?v=[% asset_version | none %]"></script>
+[% IF session.logged_in_user %]<script type="module" src="[% uri_base | none %]/modern/js/jobs.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF device %]<script type="module" src="[% uri_base | none %]/modern/js/device.js?v=[% asset_version | none %]"></script>
 <script type="module" src="[% uri_base | none %]/modern/js/ports.js?v=[% asset_version | none %]"></script>[% END %]
 

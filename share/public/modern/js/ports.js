@@ -6,6 +6,9 @@
 // The pure functions are exported for xt/js/modern-ports.test.js; mount() is
 // the DOM wiring, started for each [data-nd2-ports] element that appears.
 
+import { createDrawer } from './drawer.js';
+import { affectsDevice } from './jobs-core.js';
+
 export const STATUS_LABEL = {
   up: 'Up', down: 'Down', disabled: 'Disabled', blocking: 'STP blocking', errdisabled: 'Err-disabled',
 };
@@ -276,9 +279,15 @@ function renderPart(doc, part, uriBase) {
   return el(doc, 'span', { class: part.cls, title: part.title }, [label]);
 }
 
-export function mount(root, { fetchJson, storage, uriBase = '' }) {
+export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win = window }) {
   const doc = root.ownerDocument;
   const offered = JSON.parse(root.getAttribute('data-nd2-columns') || '[]');
+  const reasons = JSON.parse(root.getAttribute('data-nd2-reasons') || '[]');
+  const device = root.getAttribute('data-nd2-device');
+  const drawer = createDrawer({
+    doc, win, fetchJson, post, toast, uriBase, reasons, device,
+    apiBase: root.getAttribute('data-nd2-api'),
+  });
   const prefs = loadPrefs(storage);
   const state = {
     ports: [], shown: [], chips: new Set(), q: root.getAttribute('data-nd2-filter') || '',
@@ -297,15 +306,25 @@ export function mount(root, { fetchJson, storage, uriBase = '' }) {
     savePrefs(storage, { ...prefs, mode: state.mode, faceplate: state.faceplate });
   }
 
-  function select(port, from) {
-    state.selected = state.selected === port ? null : port;
+  function mark() {
     root.querySelectorAll('[data-nd2-port]').forEach((n) => {
       n.classList.toggle('nd2-sel', n.getAttribute('data-nd2-port') === state.selected);
     });
-    if (state.selected && from === 'panel') {
-      const row = table.querySelector(`tr[data-nd2-port="${CSS.escape(state.selected)}"]`);
+  }
+
+  // A port is selected while its drawer is open; asking for it again closes it
+  function select(port, from, opener) {
+    if (state.selected === port && drawer.isOpen()) return drawer.close();
+    const p = state.ports.find((x) => x.port === port);
+    if (!p) return undefined;
+    state.selected = port;
+    mark();
+    drawer.open(p, opener);
+    if (from === 'panel') {
+      const row = table.querySelector(`tr[data-nd2-port="${CSS.escape(port)}"]`);
       if (row) row.scrollIntoView({ block: 'nearest' });
     }
+    return undefined;
   }
 
   function drawPanel() {
@@ -331,7 +350,7 @@ export function mount(root, { fetchJson, storage, uriBase = '' }) {
             text: look.text != null && look.text !== '' ? look.text : String(n),
           });
           if (state.mode === 'status' && p.poe && p.poe.power_mw) btn.appendChild(el(doc, 'span', { class: 'nd2-bolt', 'aria-hidden': 'true', text: '⚡' }));
-          btn.addEventListener('click', () => select(p.port, 'panel'));
+          btn.addEventListener('click', () => select(p.port, 'panel', btn));
           b.appendChild(btn);
         });
         panel.appendChild(b);
@@ -365,10 +384,14 @@ export function mount(root, { fetchJson, storage, uriBase = '' }) {
     }))]);
     const rows = sortPorts(state.shown, state.sort, state.dir);
     const tbody = el(doc, 'tbody', {}, rows.map((p) => {
-      const tr = el(doc, 'tr', { 'data-nd2-port': p.port, class: state.selected === p.port && 'nd2-sel' },
+      const tr = el(doc, 'tr', { 'data-nd2-port': p.port, tabindex: '0', class: state.selected === p.port && 'nd2-sel' },
         cols.map((c) => el(doc, 'td', { class: COLUMNS[c.name].num && 'nd2-num', 'data-label': c.label, 'data-col': c.name },
           COLUMNS[c.name].cells(p).map((part) => renderPart(doc, part, uriBase)))));
-      tr.addEventListener('click', (e) => { if (!e.target.closest('a')) select(p.port, 'table'); });
+      tr.addEventListener('click', (e) => { if (!e.target.closest('a')) select(p.port, 'table', tr); });
+      // a row is a control: reachable by Tab, opened by Enter or Space
+      tr.addEventListener('keydown', (e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) { e.preventDefault(); select(p.port, 'table', tr); }
+      });
       return tr;
     }));
     if (!rows.length) {
@@ -392,12 +415,29 @@ export function mount(root, { fetchJson, storage, uriBase = '' }) {
       state.ports = body.data || [];
       state.slots = vlanSlots(state.ports);
       refilter();
+      if (drawer.isOpen()) {
+        const open = state.ports.find((x) => x.port === drawer.current());
+        if (open) drawer.update(open); else drawer.close();
+      }
     } catch (e) {
       count.textContent = 'The ports could not be loaded.';
     } finally {
       root.removeAttribute('aria-busy');
     }
   }
+
+  // ---- the drawer and the jobs list ----
+  doc.addEventListener('nd2:drawer-closed', () => {
+    if (!root.isConnected) return;
+    state.selected = null;
+    mark();
+  });
+  win.addEventListener('nd2:jobs', (e) => { if (root.isConnected) drawer.setJobs(e.detail.jobs); });
+  // what a finished job changed is read again from the API
+  win.addEventListener('nd2:jobs-finished', (e) => {
+    if (!root.isConnected) return;
+    if (e.detail.jobs.some((j) => affectsDevice(j, device))) load();
+  });
 
   // ---- controls ----
   let timer;
@@ -458,10 +498,14 @@ if (typeof document !== 'undefined') {
   };
   const start = (node) => {
     const roots = node.matches && node.matches('[data-nd2-ports]') ? [node] : [...(node.querySelectorAll ? node.querySelectorAll('[data-nd2-ports]') : [])];
+    // ndRequest and ndToast are the classic scripts' own, loaded before this one
+    // eslint-disable-next-line no-undef
+    const toast = typeof ndToast !== 'undefined' ? ndToast : window.ndToast;
+    const post = (url, body) => window.ndRequest.post(url, body);
     roots.forEach((r) => {
       if (r.dataset.nd2Mounted) return;
       r.dataset.nd2Mounted = '1';
-      mount(r, { fetchJson, storage: window.localStorage, uriBase });
+      mount(r, { fetchJson, storage: window.localStorage, uriBase, post, toast });
     });
   };
   start(document);

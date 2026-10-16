@@ -75,9 +75,21 @@ unlike $html, qr{/device\?q=10\.0\.0\.1}, 'modernLayout__switch__does_not_echo_t
 
 like $html, qr{data-nd-role="admin"[^>]*>\s*JA\s*</button>}s, 'modernLayout__avatar__shows_two_initials_and_the_role';
 
+like $html, qr{<div class="dropdown nd2-jobs" data-nd2-jobs data-nd2-src="/ajax/data/v2/me/jobs\?limit=10">},
+  'modernLayout__signed_in__has_the_jobs_list_reading_the_users_own_jobs';
+like $html, qr{class="nd2-badge" hidden}, 'modernLayout__jobs_badge__hidden_until_something_is_running';
+like $html, qr{<a href="/admin/jobqueue\?firstsearch=on">Whole queue</a>}, 'modernLayout__admin__links_the_whole_queue';
+like $html, qr{/modern/js/jobs\.js\?v=}, 'modernLayout__signed_in__loads_the_jobs_script';
+
 %roles = ();
 my $plain = '';
 $tt->process('layouts/main.tt', $stash, \$plain) or die $tt->error;
 unlike $plain, qr{/admin/discoverall}, 'modernLayout__not_admin__has_no_admin_menu';
+unlike $plain, qr{Whole queue}, 'modernLayout__not_admin__no_link_to_the_whole_queue';
+like $plain, qr{data-nd2-jobs}, 'modernLayout__not_admin__still_has_their_own_jobs';
+
+my $anon = '';
+$tt->process('layouts/main.tt', { %$stash, session => {} }, \$anon) or die $tt->error;
+unlike $anon, qr{data-nd2-jobs|jobs\.js}, 'modernLayout__signed_out__no_jobs_list_and_no_script_to_poll_it';
 
 done_testing;

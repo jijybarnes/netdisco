@@ -126,6 +126,34 @@ jobs:
       - name: The front panel layout, VLAN colors, filters, sorting and column prefs
         run: node --test xt/js/modern-ports.test.js
 
+  modern-drawer:
+    name: modern port drawer requests and permissions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # Same naming rule as the jobs above: name the file, never a glob.
+      - name: The drawer sends the classic route its fields, and only what the user may change
+        run: node --test xt/js/modern-drawer.test.js
+
+  modern-jobs:
+    name: modern jobs list
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # Same naming rule as the jobs above: name the file, never a glob.
+      - name: Jobs are described, followed, and reported finished once
+        run: node --test xt/js/modern-jobs.test.js
+
   no-jstree:
     name: the SNMP tree is server rendered
     runs-on: ubuntu-latest

@@ -4,6 +4,9 @@
     the tab was opened with. -%]
 <div class="nd2-ports" data-nd2-ports
   data-nd2-src="[% uri_base | none %]/ajax/data/v2/devices/[% device_ip | uri %]/ports"
+  data-nd2-api="[% uri_base | none %]/ajax/data/v2"
+  data-nd2-device="[% device_ip | html_entity %]"
+  data-nd2-reasons="[% reasons | html_entity %]"
   data-nd2-filter="[% port_filter | html_entity %]"
   data-nd2-columns="[% columns | html_entity %]">
 

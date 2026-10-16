@@ -314,8 +314,18 @@ body.nd2.nd2-signed-in {
 
 /* netdisco-toast.js pins its stack to the top right corner, which in this
    shell is the top bar's search and account menu */
-[data-nd-ui="modern"] .nd_toast-container {
-  top: var(--nd2-topbar) !important;
+[data-nd-ui="modern"] .nd_toast-container.toast-container {
+  top: auto !important;
+  right: auto !important;
+  bottom: 12px;
+  left: calc(var(--nd2-rail) + 12px);
+}
+
+@media (max-width: 760px) {
+  [data-nd-ui="modern"] .nd_toast-container.toast-container {
+    left: 8px;
+    bottom: 68px;
+  }
 }
 
 /* ---------- Bootstrap, re-skinned ---------- */
@@ -1070,6 +1080,11 @@ body.nd2.nd2-signed-in {
   cursor: pointer;
 }
 
+.nd2-ports-table tbody tr:focus-visible {
+  outline: 2px solid var(--nd2-accent);
+  outline-offset: -2px;
+}
+
 .nd2-ports-table tbody tr:hover td {
   background: var(--nd2-surface-2);
 }
@@ -1211,4 +1226,285 @@ body.nd2.nd2-signed-in {
     background: none;
     box-shadow: none;
   }
+}
+
+/* ---------- port drawer ---------- */
+
+.nd2-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1019;
+  background: rgb(15 17 21 / .28);
+}
+
+/* On a wide screen the drawer sits beside the table, which stays usable, so the
+   scrim only dims on small screens */
+@media (min-width: 761px) {
+  .nd2-scrim { display: none; }
+}
+
+.nd2-drawer {
+  position: fixed;
+  top: var(--nd2-topbar);
+  right: 0;
+  bottom: 0;
+  /* below the top bar at 1030, whose menus hang over the drawer */
+  z-index: 1020;
+  width: 420px;
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--nd2-surface);
+  border-left: 1px solid var(--nd2-border);
+  box-shadow: var(--nd2-shadow);
+}
+
+.nd2-drawer[hidden], .nd2-scrim[hidden] { display: none; }
+
+.nd2-dr-head {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--nd2-border);
+}
+
+.nd2-dr-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nd2-dr-title h3 {
+  margin: 0;
+  line-height: 1.4;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nd2-dr-close {
+  border: 0;
+  background: none;
+  color: var(--nd2-muted);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.nd2-dr-close:hover { background: var(--nd2-surface-2); color: var(--nd2-text); }
+
+.nd2-dr-body {
+  flex: 1;
+  overflow: auto;
+  padding: 6px 16px 28px;
+}
+
+.nd2-dr-sec { margin: 14px 0 18px; }
+
+.nd2-dr-sec > h4 {
+  margin: 0 0 8px;
+  line-height: 1.4;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--nd2-muted);
+}
+
+.nd2-dr-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 5px 16px;
+  margin: 0;
+}
+
+.nd2-dr-facts dt { color: var(--nd2-muted); font-weight: 400; }
+.nd2-dr-facts dd { margin: 0; overflow-wrap: anywhere; }
+
+.nd2-dr-pending {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--nd2-accent-soft);
+}
+
+.nd2-dr-form { display: grid; gap: 10px; }
+
+.nd2-dr-field > label {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-weight: 500;
+}
+
+.nd2-dr-switch {
+  padding-left: 0;
+}
+
+.nd2-dr-switch > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nd2-dr-switch .form-check-input {
+  float: none;
+  margin: 0;
+  flex: none;
+}
+
+.nd2-dr-error {
+  margin-top: 4px;
+  color: var(--nd2-critical);
+  font-size: 12.5px;
+}
+
+.nd2-dr-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.nd2-dr-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--nd2-border);
+  border-radius: 8px;
+}
+
+.nd2-clip {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nd2-node {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--nd2-border);
+  border-radius: 8px;
+}
+
+.nd2-node-ips { text-align: right; }
+
+/* the row of the open port, in the table and on the panel */
+.nd2-ports-table tbody tr.nd2-sel { cursor: pointer; }
+
+/* with the drawer open there is room beside it for the page on a wide screen */
+@media (min-width: 1100px) {
+  body.nd2-drawer-open .nd2-main { padding-right: 420px; }
+}
+
+@media (max-width: 760px) {
+  /* a sheet between the top bar and the tab bar, which stay in reach */
+  .nd2-drawer {
+    bottom: 60px;
+    width: auto;
+    left: 0;
+    border-left: 0;
+  }
+
+  .nd2-dr-body { padding-bottom: 24px; }
+}
+
+/* ---------- jobs list ---------- */
+
+.nd2-jobs { position: relative; }
+
+.nd2-jobs-btn { position: relative; }
+
+.nd2-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--nd2-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.nd2-badge[hidden] { display: none; }
+
+.nd2-jobs-menu {
+  width: 380px;
+  max-width: calc(100vw - 16px);
+  padding: 0;
+}
+
+.nd2-jobs-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--nd2-border);
+}
+
+.nd2-jobs-list {
+  max-height: 60vh;
+  overflow: auto;
+  padding: 4px;
+}
+
+.nd2-jobs-empty { padding: 12px 10px; margin: 0; }
+
+.nd2-job {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  border-radius: 7px;
+}
+
+.nd2-job:hover { background: var(--nd2-surface-2); }
+
+.nd2-job-title { font-weight: 500; }
+
+.nd2-job-why {
+  margin-top: 2px;
+  color: var(--nd2-critical);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+/* job states: queued a ring, running a spinner, done a dot, failed a diamond */
+.nd2-job-queued > i { border: 2px solid var(--nd2-neutral); }
+.nd2-job-running > i {
+  border: 2px solid var(--nd2-accent);
+  border-right-color: transparent;
+  animation: nd2-spin .8s linear infinite;
+}
+.nd2-job-done > i { background: var(--nd2-good); }
+.nd2-job-error > i { border-radius: 2px; transform: rotate(45deg); background: var(--nd2-critical); }
+.nd2-job-duplicate > i { border: 1px dashed var(--nd2-neutral); }
+
+@keyframes nd2-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .nd2-job-running > i { animation: none; border-right-color: var(--nd2-accent); }
+}
+
+@media (max-width: 760px) {
+  .nd2-jobs { position: static; }
+
+  .nd2-jobs-menu {
+    position: fixed !important;
+    inset: var(--nd2-topbar) 8px auto 8px !important;
+    width: auto;
+    transform: none !important;
+  }
+
+  .nd2-job { grid-template-columns: 90px minmax(0, 1fr); }
+  .nd2-job > time { display: none; }
 }
