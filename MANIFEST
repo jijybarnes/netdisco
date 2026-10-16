@@ -246,6 +246,7 @@ lib/App/Netdisco/Web/Plugin/Search/Node.pm
 lib/App/Netdisco/Web/Plugin/Search/Port.pm
 lib/App/Netdisco/Web/Plugin/Search/VLAN.pm
 lib/App/Netdisco/Web/PortControl.pm
+lib/App/Netdisco/Web/PortsModern.pm
 lib/App/Netdisco/Web/Report.pm
 lib/App/Netdisco/Web/Search.pm
 lib/App/Netdisco/Web/Static.pm
@@ -397,6 +398,7 @@ share/public/javascripts/portsort.js
 share/public/javascripts/versionsort.js
 share/public/modern/css/modern.css
 share/public/modern/js/device.js
+share/public/modern/js/ports.js
 share/public/modern/js/shell.js
 share/public/swagger-ui/favicon-16x16.png
 share/public/swagger-ui/favicon-32x32.png
@@ -543,8 +545,11 @@ share/schema_versions/App-Netdisco-DB-97-98-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-98-99-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-99-100-PostgreSQL.sql
 share/views-modern/ajax/device/overview.tt
+share/views-modern/ajax/device/ports.tt
+share/views-modern/ajax/device/ports_csv.tt
 share/views-modern/device.tt
 share/views-modern/layouts/main.tt
+share/views-modern/sidebar/device/ports.tt
 share/views/admintask.tt
 share/views/ajax/admintask/acleditor.tt
 share/views/ajax/admintask/aclmanager.tt
@@ -724,6 +729,7 @@ xt/145-data-routes.t
 xt/146-hidden-device-ports.t
 xt/147-device-overview-data.t
 xt/148-device-overview-templates.t
+xt/149-ports-modern.t
 xt/20-checkacl.t
 xt/21-check_acl_no_ipaddr_only.t
 xt/30-backend-workers.t
@@ -806,6 +812,7 @@ xt/js/disco-queue.test.js
 xt/js/error-reporter.test.js
 xt/js/history-ownership.test.js
 xt/js/modern-device.test.js
+xt/js/modern-ports.test.js
 xt/js/modern-shell.test.js
 xt/js/navbar-submenu.test.js
 xt/js/netmap-autosave.test.js

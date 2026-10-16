@@ -1,0 +1,7 @@
+[%# The modern Ports tab has its filters in the pane, not in a sidebar. The
+    form keeps q and f, which the pane reads (f is the filter a link such as
+    the Overview's "Open port" asks for), and the marker after the shell's own
+    says there is no sidebar: netdisco.js takes the last marker for a tab. -%]
+<input name="q" value="[% params.q | html_entity %]" type="hidden"/>
+<input name="f" value="[% params.f | html_entity %]" type="hidden"/>
+<input type="hidden" data-nd-has-sidebar="ports" value="0">

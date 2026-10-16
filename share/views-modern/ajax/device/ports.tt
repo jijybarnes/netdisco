@@ -1,0 +1,63 @@
+[%# The modern Ports tab (App::Netdisco::Web::PortsModern): a shell that
+    share/public/modern/js/ports.js fills from API v2. data-nd2-columns is the
+    site's port_columns (names, labels, defaults); data-nd2-filter the filter
+    the tab was opened with. -%]
+<div class="nd2-ports" data-nd2-ports
+  data-nd2-src="[% uri_base | none %]/ajax/data/v2/devices/[% device_ip | uri %]/ports"
+  data-nd2-filter="[% port_filter | html_entity %]"
+  data-nd2-columns="[% columns | html_entity %]">
+
+  <div class="nd2-toolbar" role="search">
+    <label class="nd2-filter">
+      <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+      <input class="nd2-ports-search" type="search" autocomplete="off"
+        placeholder="Filter by port, name, VLAN, MAC, neighbor…" aria-label="Filter ports">
+    </label>
+    <div class="nd2-chips" role="group" aria-label="Show only">
+      [% FOREACH chip IN [ ['up', 'Up'], ['down', 'Down'], ['disabled', 'Disabled'], ['issues', 'Issues'],
+                           ['nodes', 'Has nodes'], ['neighbors', 'Neighbors'], ['poe', 'PoE'] ] %]
+      <button type="button" class="nd2-chip" data-chip="[% chip.0 | html_entity %]" aria-pressed="false">[% chip.1 | html_entity %]</button>
+      [% END %]
+    </div>
+    <div class="nd2-toolbar-end">
+      <label class="nd2-check" title="Include the ports the hide_deviceports setting hides">
+        <input type="checkbox" class="nd2-ports-hidden"> Hidden ports
+      </label>
+      <div class="dropdown">
+        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle"
+          data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+          <i class="fas fa-table-columns" aria-hidden="true"></i> Columns
+        </button>
+        <div class="dropdown-menu dropdown-menu-end nd2-colpick">
+          <div class="nd2-colpick-list"></div>
+          <hr class="dropdown-divider">
+          <button type="button" class="dropdown-item nd2-colpick-reset">Reset to the defaults</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="nd2-card nd2-fp-card" aria-label="Front panel">
+    <h3>
+      <button type="button" class="nd2-fp-toggle" aria-expanded="true" aria-controls="nd2-fp">
+        <i class="fas fa-chevron-down" aria-hidden="true"></i> Front panel
+      </button>
+      <span class="nd2-fp-modes" role="group" aria-label="Color the ports by">
+        <button type="button" data-mode="status" aria-pressed="true">Status</button>
+        <button type="button" data-mode="vlan" aria-pressed="false">VLAN</button>
+        <button type="button" data-mode="poe" aria-pressed="false">PoE</button>
+        <button type="button" data-mode="nodes" aria-pressed="false">Nodes</button>
+      </span>
+    </h3>
+    <div class="nd2-fp" id="nd2-fp">
+      <div class="nd2-chassis"></div>
+      <div class="nd2-fp-legend"></div>
+      <p class="nd2-fp-note nd2-muted">Laid out from the port names: physical ports only, two rows, odd numbers on top. Filters dim the ports they leave out.</p>
+    </div>
+  </section>
+
+  <div class="nd2-tablewrap">
+    <table class="nd2-ports-table"><tbody><tr><td class="nd2-empty">Loading the ports…</td></tr></tbody></table>
+  </div>
+  <div class="nd2-tablefoot" aria-live="polite"><span class="nd2-ports-count"></span></div>
+</div>
