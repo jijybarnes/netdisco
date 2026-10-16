@@ -155,6 +155,7 @@ use App::Netdisco::Web::API::Objects;
 use App::Netdisco::Web::API::Queue;
 use App::Netdisco::Web::API::Statistics;
 use App::Netdisco::Web::API::User;
+use App::Netdisco::Web::API::V2;
 use App::Netdisco::Web::Health;
 use App::Netdisco::Web::Metrics;
 use App::Netdisco::Web::AdminTask;
@@ -574,6 +575,8 @@ $swagger_doc->{tags} = [
     description => 'Search Operations'},
   {name => 'Objects',
     description => 'Device, Port, and associated Node Data'},
+  {name => 'Objects v2',
+    description => 'Normalized Device, Port, and Node Data (also what the modern web interface reads)'},
   {name => 'Reports',
     description => 'Canned and Custom Reports'},
   {name => 'Queue',
