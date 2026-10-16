@@ -200,7 +200,8 @@
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-deferred-nodes.js?v=[% asset_version | none %]"></script>
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-portcontrol.js?v=[% asset_version | none %]"></script>
 <script type="module" src="[% uri_base | none %]/modern/js/shell.js?v=[% asset_version | none %]"></script>
-[% IF device %]<script type="module" src="[% uri_base | none %]/modern/js/device.js?v=[% asset_version | none %]"></script>[% END %]
+[% IF device %]<script type="module" src="[% uri_base | none %]/modern/js/device.js?v=[% asset_version | none %]"></script>
+<script type="module" src="[% uri_base | none %]/modern/js/ports.js?v=[% asset_version | none %]"></script>[% END %]
 
 [% FOREACH add_js IN settings._additional_javascript %]
 <script type="text/javascript" src="[% uri_base | none %]/plugin/[% add_js | none %]/[% add_js | none %].js?v=[% asset_version | none %]"></script>
