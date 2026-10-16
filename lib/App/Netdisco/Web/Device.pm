@@ -10,6 +10,8 @@ use URL::Encode 'url_params_mixed';
 use App::Netdisco::Util::Device 'match_to_setting';
 use App::Netdisco::Util::Port 'sync_portctl_roles';
 use App::Netdisco::Util::Web qw/device_display_name request_is_device/;
+use App::Netdisco::Web::UI qw/current_web_ui device_tab_for/;
+use App::Netdisco::Web::Data::Device 'device_summary';
 
 # build view settings for port connected nodes and devices
 set('connected_properties' => [
@@ -87,7 +89,7 @@ get '/device' => require_login sub {
 
     my $first = $dev->first;
 
-    params->{'tab'} ||= 'details';
+    params->{'tab'} = device_tab_for(current_web_ui(), params->{'tab'});
     template 'device', {
       netdisco_device => $first,
       display_name => device_display_name($first),
@@ -95,6 +97,9 @@ get '/device' => require_login sub {
       lgroup_list => [ schema(vars->{'tenant'})->resultset('Device')->get_distinct_col('location') ],
       hgroup_list => setting('host_group_displaynames'),
       device => params->{'tab'},
+      # the modern page header reads the same normalized device as API v2
+      (current_web_ui() eq 'modern'
+        ? (nd2_device => device_summary(schema(vars->{'tenant'}), $first)) : ()),
     }, { layout => 'main' };
 };
 

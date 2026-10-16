@@ -7,7 +7,7 @@ use JSON::PP ();
 use App::Netdisco::Web::Data qw/problem json_bool iso8601_sql layers_list/;
 
 use base 'Exporter';
-our @EXPORT_OK = qw/find_device device_summary normalize_device/;
+our @EXPORT_OK = qw/find_device device_summary normalize_device normalize_poe/;
 
 =head1 NAME
 
@@ -52,7 +52,48 @@ sub device_summary {
     '+columns' => { map {( "_iso_$_->[0]" => \iso8601_sql("me.$_->[0]") )} @TIMES },
   })->single or problem(404, 'Device not found', 'The device was removed.');
 
-  return normalize_device({ $row->get_columns });
+  my @modules = map {{ $_->get_columns }} $schema->resultset('DevicePower')
+    ->search({ 'me.ip' => $device->ip })->with_poestats->all;
+
+  return { %{ normalize_device({ $row->get_columns }) }, poe => normalize_poe(\@modules) };
+}
+
+=head2 normalize_poe( \@modules )
+
+Pure: the device's power modules, as C<with_poestats> reads them, totalled into
+one object, or C<undef> for a device with no PoE. The module budget and the
+committed power are watts as the switch reports them; the delivered power is
+what the ports measure, in watts, to a tenth. Committed power is estimated from
+each powered port's class, as the classic PoE report does.
+
+=cut
+
+sub normalize_poe {
+  my $modules = shift;
+  return undef unless $modules and scalar @$modules;
+
+  my %t = map {( $_ => 0 )} qw/budget committed delivering capable powered disabled errored/;
+  foreach my $m (@$modules) {
+    $t{budget}     += $m->{power}                // 0;
+    $t{committed}  += $m->{poe_power_committed}  // 0;
+    $t{delivering} += $m->{poe_power_delivering} // 0;
+    $t{capable}    += $m->{poe_capable_ports}    // 0;
+    $t{powered}    += $m->{poe_powered_ports}    // 0;
+    $t{disabled}   += $m->{poe_disabled_ports}   // 0;
+    $t{errored}    += $m->{poe_errored_ports}    // 0;
+  }
+
+  my $tenth = sub { 0 + sprintf '%.1f', shift };
+  return {
+    modules          => scalar @$modules,
+    budget_watts     => $tenth->($t{budget}),
+    committed_watts  => $tenth->($t{committed}),
+    delivering_watts => $tenth->($t{delivering}),
+    capable_ports    => 0 + $t{capable},
+    powered_ports    => 0 + $t{powered},
+    disabled_ports   => 0 + $t{disabled},
+    errored_ports    => 0 + $t{errored},
+  };
 }
 
 =head2 normalize_device( \%columns )

@@ -150,6 +150,7 @@ use App::Netdisco::Web::Theme;
 use App::Netdisco::Web::UI;
 use App::Netdisco::Web::Search;
 use App::Netdisco::Web::Device;
+use App::Netdisco::Web::DeviceOverview;
 use App::Netdisco::Web::Report;
 use App::Netdisco::Web::API::Objects;
 use App::Netdisco::Web::API::Queue;
