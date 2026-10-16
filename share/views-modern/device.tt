@@ -1,0 +1,102 @@
+[%# The modern device page. The header is new; below it the tab machinery is
+    the classic page's own (share/views/device.tt), ids, classes and htmx
+    attributes unchanged, because netdisco.js drives the tabs not yet moved to
+    share/views-modern through them. The header reads nd2_device, the same
+    normalized device as API v2. -%]
+[% SET d = nd2_device %]
+<header class="nd2-dev-head">
+  <div class="nd2-dev-icon" aria-hidden="true"><i class="fas fa-server"></i></div>
+  <div class="nd2-dev-title">
+    <h1>
+      [% display_name | html_entity %]
+      [% IF netdisco_device.is_pseudo %]<span class="nd2-pill nd2-pill-warning">Pseudo device</span>[% END %]
+    </h1>
+    <div class="nd2-dev-meta">
+      <span class="nd2-mono">[% d.ip | html_entity %]</span>
+[%# PRE_CHOMP eats the space between two directives, so a pair is joined in one -%]
+      [% IF d.vendor OR d.model %]<span><i class="fas fa-microchip" aria-hidden="true"></i> [% (d.vendor _ ' ' _ d.model) | html_entity %]</span>[% END %]
+      [% IF d.os %]<span>[% (d.os _ ' ' _ d.os_version) | html_entity %]</span>[% END %]
+      [% IF d.location %]<span><i class="fas fa-location-dot" aria-hidden="true"></i> [% d.location | html_entity %]</span>[% END %]
+      [% IF d.last_discover_at %]<span title="Last discovered">
+        <i class="fas fa-rotate" aria-hidden="true"></i>
+        <time datetime="[% d.last_discover_at | html_entity %]" data-nd2-relative>[% d.last_discover_at | html_entity %]</time></span>[% END %]
+    </div>
+  </div>
+  [% IF user_has_role('admin') %]
+  <div class="nd2-dev-actions" data-nd2-device="[% d.ip | html_entity %]">
+    <div class="btn-group" role="group" aria-label="Poll this device">
+      <button type="button" class="btn btn-primary btn-sm" data-nd2-job="discover"><i class="fas fa-rotate"></i> Discover</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-nd2-job="macsuck">Macsuck</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-nd2-job="arpnip">Arpnip</button>
+    </div>
+  </div>
+  [% END %]
+</header>
+
+<i class="nd_sidebar-toggle fas fa-wrench fa-lg" id="nd_sidebar-toggle-img-out"
+  rel="tooltip" data-bs-placement="left" data-bs-title="Show Sidebar"></i>
+<div class="container-fluid nd2-dev-body">
+  <div class="nd_sidebar">
+    <div class="card">
+      <div class="card-body">
+        <i class="nd_sidebar-toggle fas fa-arrow-right-from-bracket" id="nd_sidebar-toggle-img-in"
+          rel="tooltip" data-bs-placement="left" data-bs-title="Hide Sidebar" data-bs-container="body"></i>
+        <i class="nd_sidebar-pin fas fa-thumbtack"
+          rel="tooltip" data-bs-placement="left" data-bs-title="Unpin Sidebar" data-bs-container="body"></i>
+        <a id="nd_sidebar-reset-link" href="#">
+          <i class="nd_sidebar-reset fas fa-arrow-rotate-left"
+            rel="tooltip" data-bs-placement="left" data-bs-title="Reset to Defaults" data-bs-container="body"></i>
+        </a>
+        <div class="tab-content">
+          [% FOREACH tab IN settings._device_tabs %]
+          [% NEXT UNLESS tab.render_if %]
+          <div id="[% tab.tag | html_entity %]_search" class="tab-pane [% 'active' IF params.tab == tab.tag %]">
+            <form id="[% tab.tag | html_entity %]_form" class="nd_sidebar-form form-stacked"
+                method="get" action="[% uri_for('/device') | none %]"
+                hx-get="[% uri_for('/ajax/content/device/' _ tab.tag) | none %]"
+                hx-target="#[% tab.tag | html_entity %]_pane"
+                hx-sync="closest .nd_sidebar:replace"
+                hx-headers='{"X-Requested-With": "XMLHttpRequest"}'
+                hx-indicator="#[% tab.tag | html_entity %]_indicator"
+                data-nd-tab="[% tab.tag | html_entity %]">
+              <input name="tab" value="[% tab.tag | html_entity %]" type="hidden"/>
+              [% TRY %]
+              <input type="hidden" data-nd-has-sidebar="[% tab.tag | html_entity %]" value="1">
+              [% INCLUDE "sidebar/device/${tab.tag}.tt" %]
+              [% CATCH %]
+              <!-- no "[% tab.tag | html_entity %]" search options -->
+              <input name="q" value="[% params.q | html_entity %]" type="hidden"/>
+              <input name="f" value="[% params.f | html_entity %]" type="hidden"/>
+              <input type="hidden" data-nd-has-sidebar="[% tab.tag | html_entity %]" value="0">
+              [% END %]
+            </form>
+          </div> <!-- /tab-pane -->
+          [% END %]
+        </div> <!-- /tab-content -->
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <ul id="nd_search-results" class="nav nav-tabs nd2-tabs">
+      [% FOREACH tab IN settings._device_tabs %]
+      [% NEXT UNLESS tab.render_if %]
+      <li class="nav-item"><a class="nav-link[% ' active' IF params.tab == tab.tag %]" id="[% tab.tag | html_entity %]_link" href="#[% tab.tag | html_entity %]_pane">[% tab.label | html_entity %]</a></li>
+      [% END %]
+      <span id="nd_device-name">
+        <a id="nd_csv-download" href="#" download="netdisco.csv">
+          <i id="nd_csv-download-icon" class="text-info far fa-file-lines fa-lg"
+            rel="tooltip" data-bs-placement="left" data-bs-title="Download as CSV"></i></a>
+      </span>
+    </ul>
+    <div class="tab-content">
+      [% FOREACH tab IN settings._device_tabs %]
+      [% NEXT UNLESS tab.render_if %]
+      <div id="[% tab.tag | html_entity %]_indicator" class="htmx-indicator col-md-2 alert">
+        <i class="fas fa-spinner fa-spin"></i> Waiting for results...
+      </div>
+      <div class="tab-pane[% ' active' IF params.tab == tab.tag %]" id="[% tab.tag | html_entity %]_pane"></div>
+      [% END %]
+    </div>
+  </div>
+</div>

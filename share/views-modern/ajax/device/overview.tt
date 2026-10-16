@@ -1,0 +1,129 @@
+[%# The device Overview tab (App::Netdisco::Web::DeviceOverview). device is
+    the normalized device of API v2 and overview the port counts and the ports
+    that need a look (App::Netdisco::Web::Data::Ports::ports_overview).
+
+    A status is always drawn as a shape and a word, never a color alone: the
+    shapes are the ones the legend and the ports table use. -%]
+[% SET st_label = { up => 'Up', down => 'Down', disabled => 'Disabled', blocking => 'STP blocking', errdisabled => 'Err-disabled' } %]
+[% SET c = overview.by_status %]
+[% SET total = overview.total %]
+<div class="nd2-overview" data-nd2-device="[% device.ip | html_entity %]">
+  <div class="nd2-ov-main">
+
+    <section class="nd2-card" aria-labelledby="nd2-ov-ports">
+      <h3 id="nd2-ov-ports">Ports</h3>
+      <div class="nd2-card-body">
+        [% IF total %]
+        <div class="nd2-headline">
+          <span class="nd2-big">[% c.up | html_entity %]</span>
+          <span class="nd2-muted">of [% total | html_entity %] ports up &middot; [% (c.up * 100 / total) | format('%d') %]%</span>
+        </div>
+        <div class="nd2-meter" role="img"
+          aria-label="[% FOREACH k IN ['up', 'down', 'disabled', 'blocking', 'errdisabled'] %][% NEXT UNLESS c.$k %][% st_label.$k _ ' ' _ c.$k %][% ', ' UNLESS loop.last %][% END %]">
+          [% FOREACH k IN ['up', 'down', 'disabled', 'blocking', 'errdisabled'] %]
+          [% NEXT UNLESS c.$k %]
+          <div class="nd2-seg nd2-seg-[% k %]" style="flex: [% c.$k | html_entity %]"></div>
+          [% END %]
+        </div>
+        <div class="nd2-legend">
+          [% FOREACH k IN ['up', 'down', 'disabled', 'blocking', 'errdisabled'] %]
+          [% NEXT IF c.$k == 0 AND k != 'up' AND k != 'down' %]
+          <span class="nd2-st nd2-st-[% k %]"><i aria-hidden="true"></i>[% st_label.$k %] <b>[% c.$k | html_entity %]</b></span>
+          [% END %]
+        </div>
+        [% ELSE %]
+        <p class="nd2-muted">No ports are known for this device yet.</p>
+        [% END %]
+      </div>
+    </section>
+
+    <section class="nd2-card" aria-labelledby="nd2-ov-attention">
+      <h3 id="nd2-ov-attention">Needs attention [% IF overview.attention.size %]<span class="nd2-count">[% overview.attention.size | html_entity %]</span>[% END %]</h3>
+      <div class="nd2-card-body">
+        [% IF overview.attention.size %]
+        <ul class="nd2-alerts">
+          [% FOREACH a IN overview.attention %]
+          <li>
+            [% IF a.kind == 'errdisabled' %]
+            <span class="nd2-sev nd2-sev-critical" aria-hidden="true">!</span>
+            <div><b class="nd2-mono">[% a.port | html_entity %]</b> is error disabled[% IF a.detail %]: [% a.detail | html_entity %][% END %]
+            [% ELSIF a.kind == 'blocking' %]
+            <span class="nd2-sev nd2-sev-serious" aria-hidden="true">!</span>
+            <div><b class="nd2-mono">[% a.port | html_entity %]</b> is blocked by spanning tree[% IF a.detail %], towards [% a.detail | html_entity %][% END %]
+            [% ELSE %]
+            <span class="nd2-sev nd2-sev-warning" aria-hidden="true">!</span>
+            <div><b class="nd2-mono">[% a.port | html_entity %]</b> runs half duplex[% IF a.detail %] at [% a.detail | html_entity %][% END %], likely a duplex mismatch
+            [% END %]
+              [% IF a.descr %]<div class="nd2-muted">[% a.descr | html_entity %]</div>[% END %]
+            </div>
+            <a class="nd2-alert-link" href="[% uri_for('/device', { q => device.ip, tab => 'ports', f => a.port }) | none %]">Open port</a>
+          </li>
+          [% END %]
+        </ul>
+        [% ELSE %]
+        <p class="nd2-muted"><i class="fas fa-check" aria-hidden="true"></i> Nothing: no port is error disabled, blocked by spanning tree, or at half duplex.</p>
+        [% END %]
+      </div>
+    </section>
+
+    <section class="nd2-card" aria-labelledby="nd2-ov-poe">
+      <h3 id="nd2-ov-poe"><i class="fas fa-bolt" aria-hidden="true"></i> Power over Ethernet</h3>
+      <div class="nd2-card-body">
+        [% SET poe = device.poe %]
+        [% IF poe %]
+        <div class="nd2-headline">
+          <span class="nd2-big">[% poe.delivering_watts | html_entity %] W</span>
+          <span class="nd2-muted">delivered of [% poe.budget_watts | html_entity %] W budget &middot; [% poe.powered_ports | html_entity %] of [% poe.capable_ports | html_entity %] capable ports powered</span>
+        </div>
+        [% IF poe.budget_watts > 0 %]
+        [% SET pct = poe.delivering_watts * 100 / poe.budget_watts %][% SET pct = pct > 100 ? 100 : pct %]
+        <div class="nd2-track" role="img" aria-label="[% pct | format('%d') %]% of the PoE budget delivered">
+          <div style="width: [% pct | format('%.1f') %]%"></div>
+        </div>
+        [% END %]
+        <div class="nd2-muted">Committed by class: [% poe.committed_watts | html_entity %] W
+          [% IF poe.errored_ports %]&middot; <span class="nd2-st nd2-st-errdisabled"><i aria-hidden="true"></i>[% poe.errored_ports | html_entity %] in fault</span>[% END %]
+          [% IF poe.disabled_ports %]&middot; [% poe.disabled_ports | html_entity %] disabled[% END %]</div>
+        [% ELSE %]
+        <p class="nd2-muted">This device reports no PoE.</p>
+        [% END %]
+      </div>
+    </section>
+  </div>
+
+  <div class="nd2-ov-side">
+    <section class="nd2-card" aria-labelledby="nd2-ov-details">
+      <h3 id="nd2-ov-details">Details</h3>
+      <div class="nd2-card-body">
+        <dl class="nd2-facts">
+          <dt>Name</dt><dd>[% device.name || device.dns || '—' | html_entity %]</dd>
+          [% SET model = device.vendor _ ' ' _ device.model %][% SET model = model.trim %]
+          [% SET os = device.os _ ' ' _ device.os_version %][% SET os = os.trim %]
+          <dt>Model</dt><dd>[% model || '—' | html_entity %]</dd>
+          <dt>OS</dt><dd>[% os || '—' | html_entity %]</dd>
+          <dt>Serial</dt><dd class="nd2-mono">[% device.serial || '—' | html_entity %]</dd>
+          <dt>Location</dt><dd>[% device.location || '—' | html_entity %]</dd>
+          <dt>Contact</dt><dd>[% device.contact || '—' | html_entity %]</dd>
+          <dt>Uptime</dt><dd>[% IF device.uptime_seconds.defined %]<span data-nd2-duration="[% device.uptime_seconds | html_entity %]">[% device.uptime_seconds | html_entity %] s</span> at last discover[% ELSE %]—[% END %]</dd>
+          <dt>Layers</dt><dd>[% IF device.layers.size %][% device.layers.join(', ') | html_entity %][% ELSE %]—[% END %]</dd>
+          <dt>SNMP</dt><dd>[% IF device.snmp.version %]v[% device.snmp.version | html_entity %] &middot; [% END %][% device.snmp.class || '—' | html_entity %]</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="nd2-card" aria-labelledby="nd2-ov-polling">
+      <h3 id="nd2-ov-polling">Polling</h3>
+      <div class="nd2-card-body nd2-poll">
+        [% FOREACH job IN [ ['discover', 'Discover', device.last_discover_at],
+                            ['macsuck', 'Macsuck', device.last_macsuck_at],
+                            ['arpnip', 'Arpnip', device.last_arpnip_at] ] %]
+        <span>[% job.1 | html_entity %]</span>
+        <span class="nd2-muted">[% IF job.2 %]<time datetime="[% job.2 | html_entity %]" data-nd2-relative>[% job.2 | html_entity %]</time>[% ELSE %]never[% END %]</span>
+        [% IF user_has_role('admin') %]
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-nd2-job="[% job.0 | html_entity %]"><i class="fas fa-play" aria-hidden="true"></i> Run</button>
+        [% ELSE %]<span></span>[% END %]
+        [% END %]
+      </div>
+    </section>
+  </div>
+</div>
