@@ -749,3 +749,466 @@ body.nd2.nd2-signed-in {
     white-space: nowrap;
   }
 }
+
+/* ---------- device Ports tab ---------- */
+
+/* VLAN slots are the validated categorical hues 1, 2, 3 and 7; PoE and node
+   counts a single-hue sequential ramp. Dark mode has its own steps. */
+[data-nd-ui="modern"] {
+  --nd2-c1: #2a78d6; --nd2-c2: #eb6834; --nd2-c3: #1baf7a; --nd2-c4: #6250d6; --nd2-c-other: #a3aab5;
+  --nd2-s1: #b7d3f6; --nd2-s2: #6da7ec; --nd2-s3: #2a78d6; --nd2-s4: #184f95;
+  --nd2-port-empty: #e6e9ee; --nd2-chassis: #252b36; --nd2-port: 26px;
+}
+
+[data-nd-ui="modern"][data-bs-theme="dark"] {
+  --nd2-c1: #3987e5; --nd2-c2: #d95926; --nd2-c3: #199e70; --nd2-c4: #9085e9; --nd2-c-other: #5b6472;
+  --nd2-s1: #184f95; --nd2-s2: #256abf; --nd2-s3: #5598e7; --nd2-s4: #9ec5f4;
+  --nd2-port-empty: #2a303b; --nd2-chassis: #0a0d12;
+}
+
+.nd2-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.nd2-filter {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 320px;
+  padding: 5px 10px;
+  margin: 0;
+  border: 1px solid var(--nd2-border-strong);
+  border-radius: 7px;
+  background: var(--nd2-surface);
+  color: var(--nd2-muted);
+}
+
+.nd2-filter input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--nd2-text);
+}
+
+.nd2-filter:focus-within {
+  border-color: var(--nd2-accent);
+}
+
+.nd2-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nd2-chip {
+  border: 1px dashed var(--nd2-border-strong);
+  background: var(--nd2-surface);
+  color: var(--nd2-text-2);
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-size: 13px;
+}
+
+.nd2-chip[aria-pressed="true"] {
+  border-style: solid;
+  border-color: var(--nd2-accent);
+  background: var(--nd2-accent-soft);
+  color: var(--nd2-accent-text);
+}
+
+.nd2-chip[aria-pressed="true"]::after {
+  content: " ✕";
+}
+
+.nd2-toolbar-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nd2-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--nd2-text-2);
+  font-size: 13px;
+}
+
+.nd2-colpick {
+  min-width: 250px;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 6px;
+}
+
+.nd2-colpick label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.nd2-colpick label:hover {
+  background: var(--nd2-surface-2);
+}
+
+.nd2-fp-card {
+  margin-bottom: 12px;
+}
+
+.nd2-fp-card > h3 {
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.nd2-fp-toggle {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nd2-fp-toggle[aria-expanded="false"] > i {
+  transform: rotate(-90deg);
+}
+
+.nd2-fp-modes {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--nd2-surface-2);
+  font-weight: 400;
+}
+
+.nd2-fp-modes button {
+  border: 0;
+  background: none;
+  color: var(--nd2-text-2);
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 12.5px;
+}
+
+.nd2-fp-modes button[aria-pressed="true"] {
+  background: var(--nd2-surface);
+  color: var(--nd2-text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .14);
+}
+
+.nd2-fp {
+  padding: 12px;
+}
+
+.nd2-chassis {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--nd2-chassis);
+  overflow-x: auto;
+  scrollbar-color: #4b5563 transparent;
+}
+
+.nd2-chassis > p {
+  margin: 0;
+  color: #9aa4b2;
+}
+
+.nd2-bank {
+  display: grid;
+  grid-template-rows: repeat(2, var(--nd2-port));
+  grid-auto-flow: column;
+  grid-auto-columns: var(--nd2-port);
+  gap: 4px;
+}
+
+.nd2-bank-uplink {
+  grid-auto-columns: calc(var(--nd2-port) * 1.35);
+}
+
+.nd2-p {
+  position: relative;
+  height: var(--nd2-port);
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--nd2-port-empty);
+  color: #445;
+  font: 600 9.5px var(--nd2-mono);
+  display: grid;
+  place-items: center;
+  transition: opacity .12s;
+}
+
+.nd2-p:hover { outline: 2px solid #fff; outline-offset: 1px; }
+.nd2-p:focus-visible { outline: 2px solid var(--nd2-accent); outline-offset: 2px; }
+.nd2-p.nd2-sel { outline: 2px solid var(--nd2-warning); outline-offset: 2px; }
+.nd2-p.nd2-dim { opacity: .18; }
+.nd2-p.nd2-ink { color: #fff; }
+
+/* status mode: the same shapes as the legend's dots, as fills */
+.nd2-p-up { background: var(--nd2-good); color: #fff; }
+.nd2-p-down { background: transparent; box-shadow: inset 0 0 0 2px #5b6575; color: #9aa4b2; }
+.nd2-p-disabled { background: var(--nd2-neutral) repeating-linear-gradient(45deg, rgb(0 0 0 / .3) 0 2px, transparent 2px 5px); color: #fff; }
+.nd2-p-blocking { background: var(--nd2-serious); color: #3b1300; }
+.nd2-p-errdisabled { background: var(--nd2-critical); color: #fff; }
+.nd2-p-empty { background: var(--nd2-port-empty); }
+
+.nd2-c1 { background: var(--nd2-c1); }
+.nd2-c2 { background: var(--nd2-c2); }
+.nd2-c3 { background: var(--nd2-c3); }
+.nd2-c4 { background: var(--nd2-c4); }
+.nd2-c-other { background: var(--nd2-c-other); }
+.nd2-s1 { background: var(--nd2-s1); }
+.nd2-s2 { background: var(--nd2-s2); }
+.nd2-s3 { background: var(--nd2-s3); }
+.nd2-s4 { background: var(--nd2-s4); }
+
+.nd2-bolt {
+  position: absolute;
+  top: -1px;
+  right: 1px;
+  font-size: 7px;
+}
+
+.nd2-fp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 10px;
+  color: var(--nd2-text-2);
+  font-size: 12.5px;
+}
+
+.nd2-fp-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nd2-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.nd2-fp-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.nd2-tablewrap {
+  overflow: auto;
+  max-height: calc(100vh - 220px);
+  border: 1px solid var(--nd2-border);
+  border-radius: var(--nd2-radius);
+  background: var(--nd2-surface);
+}
+
+.nd2-ports-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.nd2-ports-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  background: var(--nd2-surface-2);
+  border-bottom: 1px solid var(--nd2-border);
+  white-space: nowrap;
+  text-align: left;
+}
+
+.nd2-th {
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--nd2-text-2);
+  font-weight: 600;
+  text-align: inherit;
+}
+
+.nd2-arrow {
+  margin-left: 4px;
+  font-size: 10px;
+  color: var(--nd2-muted);
+}
+
+.nd2-ports-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--nd2-border);
+  vertical-align: middle;
+}
+
+.nd2-ports-table td > * + * {
+  margin-left: 6px;
+}
+
+.nd2-ports-table tbody tr {
+  cursor: pointer;
+}
+
+.nd2-ports-table tbody tr:hover td {
+  background: var(--nd2-surface-2);
+}
+
+.nd2-ports-table tbody tr.nd2-sel td {
+  background: var(--nd2-accent-soft);
+}
+
+.nd2-ports-table tbody tr.nd2-sel td:first-child {
+  box-shadow: inset 3px 0 0 var(--nd2-accent);
+}
+
+.nd2-num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.nd2-strong {
+  font-weight: 650;
+}
+
+.nd2-vl {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid var(--nd2-border);
+  background: var(--nd2-surface-2);
+  font: 11.5px var(--nd2-mono);
+}
+
+.nd2-ports-table td > .nd2-vl + .nd2-vl {
+  margin-left: 3px;
+}
+
+.nd2-text-critical {
+  color: var(--nd2-critical);
+}
+
+.nd2-st-warning > i {
+  background: var(--nd2-warning);
+}
+
+.nd2-empty {
+  padding: 30px !important;
+  text-align: center;
+  color: var(--nd2-muted);
+}
+
+.nd2-tablefoot {
+  padding: 8px 2px;
+  color: var(--nd2-muted);
+  font-size: 12.5px;
+}
+
+@media (max-width: 760px) {
+  [data-nd-ui="modern"] { --nd2-port: 32px; }
+
+  .nd2-filter {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .nd2-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    flex: 1 1 100%;
+    scrollbar-width: none;
+  }
+
+  .nd2-chip {
+    white-space: nowrap;
+  }
+
+  .nd2-toolbar-end {
+    margin-left: 0;
+  }
+
+  /* rows become cards, each cell under its column's name */
+  .nd2-tablewrap {
+    max-height: none;
+    border: 0;
+    background: none;
+    overflow: visible;
+  }
+
+  .nd2-ports-table,
+  .nd2-ports-table tbody {
+    display: block;
+  }
+
+  .nd2-ports-table thead {
+    display: none;
+  }
+
+  .nd2-ports-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--nd2-border);
+    border-radius: 10px;
+    background: var(--nd2-surface);
+  }
+
+  .nd2-ports-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: left !important;
+  }
+
+  .nd2-ports-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--nd2-muted);
+  }
+
+  .nd2-ports-table td[data-col="c_port"] {
+    grid-column: 1 / -1;
+    font-size: 14px;
+  }
+
+  .nd2-ports-table td[data-col="c_port"]::before {
+    display: none;
+  }
+
+  .nd2-ports-table tbody tr.nd2-sel {
+    border-color: var(--nd2-accent);
+  }
+
+  .nd2-ports-table tbody tr.nd2-sel td,
+  .nd2-ports-table tbody tr.nd2-sel td:first-child {
+    background: none;
+    box-shadow: none;
+  }
+}

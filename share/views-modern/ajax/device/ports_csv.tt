@@ -1,0 +1,17 @@
+[%# The modern Ports tab's CSV download: every port, normalized as API v2
+    returns it. CSV is App::Netdisco::Template::Plugin::CSV, which neutralizes
+    a cell that a spreadsheet would read as a formula. Each dump is followed by
+    an empty line because PRE_CHOMP takes one newline before every directive,
+    as in the classic CSV templates. -%]
+[% USE CSV -%]
+[% CSV.dump([ 'Port', 'Status', 'Name', 'Description', 'Type', 'Speed', 'Duplex', 'Native VLAN', 'VLANs',
+              'PoE (mW)', 'Nodes', 'Neighbor IP', 'Neighbor Port', 'Neighbor Name', 'Last Change', 'MAC', 'MTU' ]) %]
+
+[% FOREACH p IN ports %]
+[% SET n = p.neighbor || {} %]
+[% SET poe_mw = p.poe ? p.poe.power_mw : '' %]
+[% SET n_name = n.dns || n.id %]
+[% CSV.dump([ p.port, p.status, p.name, p.descr, p.type, p.speed, p.duplex, p.native_vlan, p.vlans.join(' '),
+              poe_mw, p.node_count, n.ip, n.port, n_name, p.last_change_at, p.mac, p.mtu ]) %]
+
+[% END %]

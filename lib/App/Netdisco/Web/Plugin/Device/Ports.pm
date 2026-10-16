@@ -6,6 +6,8 @@ use Dancer::Plugin::Auth::Extensible;
 
 use App::Netdisco::Util::Port qw/port_acl_service port_acl_pvid port_acl_name hidden_device_ports/;
 use App::Netdisco::Web::Plugin;
+use App::Netdisco::Web::UI 'current_web_ui';
+use App::Netdisco::Web::PortsModern 'modern_ports_pane';
 
 use List::MoreUtils 'singleton';
 use NetAddr::MAC ();
@@ -314,6 +316,9 @@ sub _threshold_scope {
 
 # device ports with a description (er, name) matching
 get '/ajax/content/device/ports' => require_login sub {
+    # the modern interface draws this tab from API v2 in the browser
+    return modern_ports_pane() if current_web_ui() eq 'modern';
+
     my $q = param('q');
     my $prefer = param('prefer');
     $prefer = ''
