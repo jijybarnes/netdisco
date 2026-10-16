@@ -133,6 +133,13 @@ is_json_bool $device->{is_pseudo}, 0, 'normalizeDevice__is_pseudo__json_false';
 unlike(JSON::PP->new->encode($device), qr/secret-community/,
   'normalizeDevice__snmp_community__never_appears');
 
+# device_summary adds poe (normalize_poe) to these
+is_deeply [ sort keys %$device ], [ sort qw/
+  ip dns name description vendor model os os_version serial chassis_id mac
+  location contact layers uptime_seconds num_ports is_pseudo snmp
+  first_seen_at last_discover_at last_macsuck_at last_arpnip_at tags custom_fields
+/ ], 'normalizeDevice__fields__are_the_documented_set';
+
 # ---- one node ----
 
 my $node = normalize_node(

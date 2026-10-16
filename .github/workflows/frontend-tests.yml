@@ -98,6 +98,20 @@ jobs:
       - name: The slash shortcut focuses search without stealing typed slashes
         run: node --test xt/js/modern-shell.test.js
 
+  modern-device:
+    name: modern device page times and poll buttons
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # Same naming rule as the jobs above: name the file, never a glob.
+      - name: Relative times, durations, and polls through the classic admin route
+        run: node --test xt/js/modern-device.test.js
+
   no-jstree:
     name: the SNMP tree is server rendered
     runs-on: ubuntu-latest

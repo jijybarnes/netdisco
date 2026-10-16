@@ -8,7 +8,7 @@ use URI;
 use base 'Exporter';
 our @EXPORT_OK = qw/
   web_ui_names valid_web_ui current_web_ui ui_include_paths safe_back_path
-  back_from_referer
+  back_from_referer device_tab_for
 /;
 
 =head1 NAME
@@ -120,6 +120,23 @@ sub back_from_referer {
   return undef unless length $from->host and lc $from->host eq lc $site->host;
 
   return safe_back_path($from->path_query);
+}
+
+=head2 device_tab_for( $web_ui, $requested_tab )
+
+The device page tab to open. The modern interface opens on its Overview, the
+classic one on Details as it always has. Overview exists only in the modern
+interface, so a link to it (or a switch back to classic while on it) opens
+Details there instead.
+
+=cut
+
+sub device_tab_for {
+  my ($ui, $tab) = @_;
+  my $modern = (defined $ui and $ui eq 'modern');
+  return ($modern ? 'overview' : 'details') unless defined $tab and length $tab;
+  return 'details' if $tab eq 'overview' and not $modern;
+  return $tab;
 }
 
 hook 'before' => sub {
