@@ -73,7 +73,7 @@ set plack_middlewares => [
       expires => 'access plus 1 day',
   )],
   [ Static => (
-      path => qr{^/(?:javascripts|css|font|images)/},
+      path => qr{^/(?:javascripts|css|font|images|modern)/},
       root => $ENV{DANCER_PUBLIC},
       pass_through => 1,
   )],

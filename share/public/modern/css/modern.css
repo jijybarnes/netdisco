@@ -1,0 +1,431 @@
+/* Netdisco modern interface: tokens, shell, and a re-skin of Bootstrap.
+
+   Loaded after netdisco.css and before a web_theme sheet, so a site theme still
+   has the last word. Every rule is scoped under [data-nd-ui="modern"] or a
+   .nd2- class, so loading this in the classic layout by mistake changes nothing.
+
+   Pages not yet moved to share/views-modern render their classic template in
+   this shell. The shell is therefore built from fixed elements (a 52px top bar
+   and a 64px rail) and leaves the document flow alone: the classic pages' own
+   offsets, measured against a fixed 50px navbar, still land where they did. */
+
+[data-nd-ui="modern"] {
+  --nd2-rail: 64px;
+  --nd2-topbar: 52px;
+  --nd2-bg: #f6f7f9;
+  --nd2-surface: #ffffff;
+  --nd2-surface-2: #f1f3f6;
+  --nd2-border: #e3e6eb;
+  --nd2-border-strong: #cfd4dc;
+  --nd2-text: #111827;
+  --nd2-text-2: #4b5563;
+  --nd2-muted: #6b7280;
+  --nd2-accent: #2a78d6;
+  --nd2-accent-soft: #e7f0fb;
+  --nd2-accent-text: #1c5cab;
+  --nd2-rail-bg: #111827;
+  --nd2-rail-text: #9ca3af;
+  /* status colors carry meaning only next to an icon or a label */
+  --nd2-good: #0ca30c;
+  --nd2-warning: #fab219;
+  --nd2-serious: #ec835a;
+  --nd2-critical: #d03b3b;
+  --nd2-neutral: #9aa1ab;
+  --nd2-shadow: 0 1px 2px rgb(16 24 40 / .06), 0 4px 16px rgb(16 24 40 / .06);
+  --nd2-radius: 8px;
+  --nd2-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --bs-body-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --bs-body-font-size: .875rem;
+  --bs-body-bg: var(--nd2-bg);
+  --bs-body-color: var(--nd2-text);
+  --bs-secondary-color: var(--nd2-muted);
+  --bs-border-color: var(--nd2-border);
+  --bs-border-radius: var(--nd2-radius);
+  --bs-primary: var(--nd2-accent);
+  --bs-primary-rgb: 42, 120, 214;
+  --bs-link-color: var(--nd2-accent-text);
+  --bs-link-color-rgb: 28, 92, 171;
+  --bs-link-hover-color: var(--nd2-accent);
+  --bs-font-monospace: var(--nd2-mono);
+}
+
+[data-nd-ui="modern"][data-bs-theme="dark"] {
+  --nd2-bg: #0f1115;
+  --nd2-surface: #171a20;
+  --nd2-surface-2: #1d2128;
+  --nd2-border: #272c35;
+  --nd2-border-strong: #353b46;
+  --nd2-text: #eceef1;
+  --nd2-text-2: #b6bcc6;
+  --nd2-muted: #8b929d;
+  --nd2-accent: #3987e5;
+  --nd2-accent-soft: #1b2a3f;
+  --nd2-accent-text: #86b6ef;
+  --nd2-rail-bg: #0a0c10;
+  --nd2-neutral: #6b7280;
+  --nd2-shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 24px rgb(0 0 0 / .35);
+
+  --bs-primary-rgb: 57, 135, 229;
+  --bs-link-color-rgb: 134, 182, 239;
+}
+
+/* ---------- shell ---------- */
+
+body.nd2 {
+  padding-top: var(--nd2-topbar);
+  background: var(--nd2-bg);
+}
+
+body.nd2.nd2-signed-in {
+  padding-left: var(--nd2-rail);
+}
+
+.nd2-topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1030;
+  height: var(--nd2-topbar);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  background: var(--nd2-surface);
+  border-bottom: 1px solid var(--nd2-border);
+}
+
+.nd2-signed-in .nd2-topbar {
+  left: var(--nd2-rail);
+}
+
+.nd2-topbar-brand {
+  font-weight: 650;
+  color: var(--nd2-text);
+  text-decoration: none;
+}
+
+.nd2-search {
+  position: relative;
+  flex: 0 1 520px;
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+}
+
+.nd2-search > .fa-magnifying-glass {
+  position: absolute;
+  left: 11px;
+  color: var(--nd2-muted);
+  pointer-events: none;
+}
+
+/* netdisco.css draws #nq as the classic bar's dark 286px pill, by id, so these
+   need the id too to take over */
+[data-nd-ui="modern"] .nd2-search #nq {
+  width: 100%;
+  padding: 6px 34px;
+  color: var(--nd2-text);
+  background: var(--nd2-surface-2);
+  border: 1px solid var(--nd2-border);
+  border-radius: var(--nd2-radius);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+[data-nd-ui="modern"] .nd2-search #nq:not(:focus)::placeholder {
+  color: var(--nd2-muted);
+}
+
+[data-nd-ui="modern"] .nd2-search #nq:focus {
+  background: var(--nd2-surface);
+  border-color: var(--nd2-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nd2-accent) 25%, transparent);
+}
+
+/* the shortcut hint only matters before the box is in use */
+.nd2-search #nq:focus ~ .nd2-kbd {
+  display: none;
+}
+
+.nd2-kbd {
+  position: absolute;
+  right: 9px;
+  font: 11px var(--nd2-mono);
+  color: var(--nd2-text-2);
+  background: var(--nd2-surface);
+  border: 1px solid var(--nd2-border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+/* the typeahead menu is positioned for the classic navbar's search box */
+.nd2-search .nd_navbar-suggestions {
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+}
+
+.nd2-topbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--nd2-text-2);
+  border-radius: 7px;
+  padding: 6px 9px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.nd2-topbar-btn:hover {
+  background: var(--nd2-surface-2);
+  border-color: var(--nd2-border);
+}
+
+.nd2-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--nd2-accent-soft);
+  color: var(--nd2-accent-text);
+  font-weight: 700;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+}
+
+/* the role the classic navbar showed as an icon color */
+.nd2-avatar[data-nd-role="admin"] { box-shadow: 0 0 0 2px var(--nd2-critical); }
+.nd2-avatar[data-nd-role="port_control"] { box-shadow: 0 0 0 2px var(--nd2-warning); }
+
+.nd2-rail {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1031;
+  width: var(--nd2-rail);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0;
+  background: var(--nd2-rail-bg);
+  color: var(--nd2-rail-text);
+}
+
+[data-bs-theme="dark"] .nd2-rail {
+  border-right: 1px solid var(--nd2-border);
+}
+
+.nd2-rail-logo {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #2a78d6, #1baf7a);
+  color: #fff !important;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.nd2-rail-item {
+  width: 52px;
+  padding: 8px 0 6px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  font-size: 10.5px;
+  line-height: 1.1;
+  text-align: center;
+  text-decoration: none;
+}
+
+.nd2-rail-item > i {
+  font-size: 17px;
+}
+
+.nd2-rail-item:hover,
+.nd2-rail-item:focus-visible,
+.nd2-rail-menu .show > .nd2-rail-item,
+.nd2-rail-item[aria-expanded="true"] {
+  background: rgb(255 255 255 / .07);
+  color: #e5e7eb;
+}
+
+.nd2-rail-item.active {
+  background: rgb(42 120 214 / .25);
+  color: #fff;
+}
+
+.nd2-rail-spacer {
+  flex: 1;
+}
+
+/* the rail's Reports and Admin menus: every entry at once, in columns,
+   rather than the classic nested dropdowns */
+.nd2-flyout {
+  --bs-dropdown-padding-x: 0;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding: 14px 16px;
+  border-color: var(--nd2-border);
+  border-radius: 12px;
+  box-shadow: var(--nd2-shadow);
+}
+
+.nd2-flyout-title {
+  font-weight: 650;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.nd2-flyout-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(190px, 230px));
+  gap: 4px 22px;
+}
+
+.nd2-flyout-group h6 {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--nd2-muted);
+}
+
+.nd2-flyout .dropdown-item {
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: normal;
+  font-size: 13px;
+}
+
+/* ---------- Bootstrap, re-skinned ---------- */
+
+[data-nd-ui="modern"] .card {
+  --bs-card-border-color: var(--nd2-border);
+  --bs-card-bg: var(--nd2-surface);
+  --bs-card-border-radius: var(--nd2-radius);
+}
+
+[data-nd-ui="modern"] .btn-primary {
+  --bs-btn-bg: var(--nd2-accent);
+  --bs-btn-border-color: var(--nd2-accent);
+  --bs-btn-hover-bg: var(--nd2-accent-text);
+  --bs-btn-hover-border-color: var(--nd2-accent-text);
+}
+
+[data-nd-ui="modern"] .dropdown-menu {
+  --bs-dropdown-border-color: var(--nd2-border);
+  --bs-dropdown-border-radius: 10px;
+  --bs-dropdown-link-active-bg: var(--nd2-accent);
+  box-shadow: var(--nd2-shadow);
+}
+
+[data-nd-ui="modern"] .nav-tabs {
+  --bs-nav-tabs-border-color: var(--nd2-border);
+  --bs-nav-tabs-link-active-bg: transparent;
+  --bs-nav-tabs-link-active-border-color: transparent;
+  --bs-nav-tabs-link-hover-border-color: transparent;
+}
+
+[data-nd-ui="modern"] .nav-tabs .nav-link {
+  color: var(--nd2-muted);
+  border-width: 0 0 2px;
+  font-weight: 500;
+}
+
+[data-nd-ui="modern"] .nav-tabs .nav-link.active {
+  color: var(--nd2-text);
+  border-bottom-color: var(--nd2-accent);
+}
+
+[data-nd-ui="modern"] .form-control,
+[data-nd-ui="modern"] .form-select {
+  border-color: var(--nd2-border-strong);
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 760px) {
+  [data-nd-ui="modern"] {
+    --nd2-rail: 0px;
+  }
+
+  body.nd2.nd2-signed-in {
+    padding-bottom: 64px;
+  }
+
+  .nd2-topbar {
+    padding: 0 10px;
+    gap: 6px;
+  }
+
+  .nd2-search {
+    flex: 1 1 auto;
+  }
+
+  .nd2-kbd,
+  .nd2-hide-sm {
+    display: none;
+  }
+
+  /* the rail becomes a tab bar along the bottom edge */
+  .nd2-rail {
+    top: auto;
+    right: 0;
+    width: auto;
+    height: 60px;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 0 4px env(safe-area-inset-bottom);
+  }
+
+  .nd2-rail-logo,
+  .nd2-rail-spacer {
+    display: none;
+  }
+
+  .nd2-rail > .nd2-rail-item,
+  .nd2-rail-menu {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* menus open as a sheet above the tab bar, whatever Popper computed */
+  .nd2-flyout.show {
+    position: fixed !important;
+    inset: auto 0 60px 0 !important;
+    transform: none !important;
+    max-height: 70vh;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .nd2-flyout-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media print {
+  .nd2-rail,
+  .nd2-topbar {
+    display: none;
+  }
+
+  body.nd2.nd2-signed-in {
+    padding: 0;
+  }
+}

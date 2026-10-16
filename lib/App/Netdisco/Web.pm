@@ -147,6 +147,7 @@ BEGIN {
 use App::Netdisco::Web::AuthN;
 use App::Netdisco::Web::Static;
 use App::Netdisco::Web::Theme;
+use App::Netdisco::Web::UI;
 use App::Netdisco::Web::Search;
 use App::Netdisco::Web::Device;
 use App::Netdisco::Web::Report;
@@ -233,6 +234,12 @@ foreach my $cat (@{ setting('_report_order') }) {
           @{ setting('_reports_menu')->{ $cat } } ];
 }
 
+# the web interface overlay (App::Netdisco::Web::UI) sits in front of the
+# plugin and core views, and behind template_paths below, so a site's own
+# templates still win whichever interface the browser uses
+unshift @{ config->{engines}->{netdisco_template_toolkit}->{INCLUDE_PATH} },
+  \&App::Netdisco::Web::UI::ui_include_paths;
+
 # any template paths in deployment.yml (should override plugins)
 if (setting('template_paths') and ref [] eq ref setting('template_paths')) {
     if (setting('site_local_files')) {
@@ -254,6 +261,7 @@ foreach my $finding (scan_shadowed_files(
 
 # after template_paths, which decides where site-local themes can live
 App::Netdisco::Web::Theme::resolve_configured_theme();
+App::Netdisco::Web::UI::resolve_default_web_ui();
 
 # load cookie key from database
 setting('session_cookie_key' => undef);
