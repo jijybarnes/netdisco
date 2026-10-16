@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+[%# The modern shell. Pages not yet moved to share/views-modern render their
+    classic template inside it, so the head and the scripts at the bottom carry
+    everything the classic layout loads, in the same order, and the body keeps
+    the classic data attributes that netdisco.js reads. -%]
+<html data-nd-theme-default="[% settings._web_theme.name | html_entity %]" data-nd-theme-root="[% uri_base | none %]/theme/" data-nd-ui="modern">
+<head>
+  <script src="[% uri_base | none %]/javascripts/netdisco-theme.js?v=[% asset_version | none %]"></script>
+  <meta http-equiv="Content-type" content="text/html; charset=[% settings.charset | html_entity %]" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="shortcut icon" href="[% uri_base | none %]/images/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="[% uri_base | none %]/images/favicon.ico" type="image/x-icon">
+  <title>[% settings.branding_text | none %]</title>
+
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/bootstrap.min.js?v=[% asset_version | none %]"></script>
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/bootstrap-toggle.min.js?v=[% asset_version | none %]"></script>
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/force-graph.min.js?v=[% asset_version | none %]"></script>
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/dataTables.min.js?v=[% asset_version | none %]"></script>
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/dataTables.bootstrap.js?v=[% asset_version | none %]"></script>
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/dataTables.ip-address-detect.js?v=[% asset_version | none %]"></script>
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/dataTables.ip-address-sort.js?v=[% asset_version | none %]"></script>
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/portsort.js?v=[% asset_version | none %]"></script>
+  <script type="text/javascript" src="[% uri_base | none %]/javascripts/versionsort.js?v=[% asset_version | none %]"></script>
+
+  <link rel="stylesheet" href="[% uri_base | none %]/css/bootstrap.min.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/css/bootstrap-toggle.min.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/css/awesome-bootstrap-checkbox.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/css/font-awesome.min.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/css/netdisco.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/css/bootstrap-tree.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/css/dataTables.bootstrap.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/modern/css/modern.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/css/nd_print.css?v=[% asset_version | none %]" media="print"/>
+  [%- IF settings._web_theme %]
+  <link rel="stylesheet" href="[% uri_base | none %]/theme.css?v=[% settings._web_theme.mtime | uri %]"/>
+  [%- END %]
+
+  [% FOREACH add_css IN settings._additional_css %]
+  <link rel="stylesheet" href="[% uri_base | none %]/plugin/[% add_css | none %]/[% add_css | none %].css?v=[% asset_version | none %]"/>
+  [% END %]
+</head>
+
+<body class="nd2[% ' nd2-signed-in' IF session.logged_in_user %]"
+      data-nd-uri-base="[% uri_base | html_entity %]"
+      data-nd-page="[% IF device %]device[% ELSIF search %]search[% ELSIF report %]report[% ELSIF task %]admin[% END %]"
+      data-nd-check-userlog="[% settings.check_userlog ? 1 : 0 %]"
+      data-nd-page-length="[% settings.table_pagesize | html_entity %]"
+      data-nd-length-menu="[% table_showrecordsmenu | html_entity %]"
+      data-nd-active-tab="[% params.tab | html_entity %]"
+      data-nd-path="[% settings.path | html_entity %]">
+
+[% IF session.logged_in_user %]
+<nav class="nd2-rail" aria-label="Main">
+  <a class="nd2-rail-logo" href="[% uri_for('') | none %]" title="[% settings.branding_text | html_entity %]">nd</a>
+  <a class="nd2-rail-item" href="[% uri_for('') | none %]">
+    <i class="fas fa-house"></i><span>Home</span></a>
+  [% FOREACH ni IN settings._navbar_items %]
+  <a class="nd2-rail-item[% ' active' IF vars.nav == ni.tag %]" href="[% uri_for(ni.path) | none %]">
+    <i class="fas [% ni.tag == 'inventory' ? 'fa-boxes-stacked' : 'fa-circle-dot' %]"></i><span>[% ni.label | html_entity %]</span></a>
+  [% END %]
+
+  [% IF settings._reports.size %]
+  <div class="dropend nd2-rail-menu">
+    <a href="#" class="nd2-rail-item[% ' active' IF vars.nav == 'reports' %]" role="button"
+      data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+      <i class="fas fa-chart-column"></i><span>Reports</span></a>
+    <div class="dropdown-menu nd2-flyout">
+      <div class="nd2-flyout-title">Reports</div>
+      <div class="nd2-flyout-columns">
+      [% FOREACH category IN settings._report_order %]
+        [% NEXT UNLESS settings._reports_menu.$category.size %]
+        <div class="nd2-flyout-group">
+          <h6>[% category | html_entity %]</h6>
+          [% FOREACH item IN settings._reports_menu.$category %]
+            [% NEXT IF settings._reports.$item.hidden %]
+          <a class="dropdown-item" href="[% uri_for('/report/' _ item) %]?firstsearch=on">[% settings._reports.$item.label | html_entity %]</a>
+          [% END %]
+        </div>
+      [% END %]
+      </div>
+    </div>
+  </div>
+  [% END %]
+
+  [% IF user_has_role('admin') %]
+  <div class="dropend nd2-rail-menu">
+    <a href="#" class="nd2-rail-item[% ' active' IF vars.nav == 'admin' %]" role="button"
+      data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+      <i class="fas fa-gear"></i><span>Admin</span></a>
+    <div class="dropdown-menu nd2-flyout">
+      <div class="nd2-flyout-title">Admin</div>
+      <div class="nd2-flyout-columns">
+        <div class="nd2-flyout-group">
+          <h6>Run on all devices</h6>
+          [% FOREACH job IN [
+               ['discoverall', 'Discover All'], ['arpwalk', 'Arpnip All'], ['macwalk', 'Macsuck All'],
+               ['nbtwalk', 'NBTstat All'], ['expire', 'Run Expire Job'], ['stats', 'Update Statistics'] ] %]
+          <form method="post" class="nd_inline-form" action="[% uri_for('/admin/' _ job.0) | none %]">
+            <button type="submit" class="dropdown-item">[% job.1 | html_entity %]</button>
+          </form>
+          [% END %]
+        </div>
+        [% IF settings._admin_tasks.size %]
+        <div class="nd2-flyout-group">
+          <h6>Tasks</h6>
+          [% FOREACH ai IN settings._admin_order %]
+            [% NEXT IF settings._admin_tasks.$ai.hidden %]
+            [% IF ai == 'divider' %]
+          <hr class="dropdown-divider">
+            [% ELSE %]
+[%# firstsearch: see the same link in share/views/layouts/main.tt -%]
+          <a class="dropdown-item" href="[% uri_for('/admin/' _ ai) %]?firstsearch=on">[% settings._admin_tasks.$ai.label | html_entity %]</a>
+            [% END %]
+          [% END %]
+        </div>
+        [% END %]
+      </div>
+    </div>
+  </div>
+  [% END %]
+  <div class="nd2-rail-spacer"></div>
+</nav>
+[% END %]
+
+<header class="nd2-topbar">
+  [% IF NOT session.logged_in_user %]
+  <a class="nd2-topbar-brand" href="[% uri_for('') | none %]">[% settings.branding_text | none %]</a>
+  [% ELSE %]
+  <form class="nd2-search" method="get" action="[% uri_for('/search') | none %]" role="search">
+    <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+    <input placeholder="Search devices, IP, MAC, VLAN, ports…" class="form-control"
+      id="nq" name="q" value="[% display_name | html_entity %]" type="search" autocomplete="off"
+      aria-label="Search"
+      data-nd-typeahead="/ajax/data/devicename/typeahead"
+      data-nd-typeahead-min="3" data-nd-typeahead-first
+      data-nd-typeahead-menu="nd_search-suggestions nd_navbar-suggestions"/>
+    <input name="firstsearch" type="hidden" value="on">
+    <kbd class="nd2-kbd" aria-hidden="true">/</kbd>
+  </form>
+
+  [% IF settings.tenant_databases.size %]
+  [% SET tenant = vars.tenant %]
+  <div class="dropdown">
+    <button class="nd2-topbar-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="fas fa-house text-success"></i>
+      <span class="nd2-hide-sm">[% (settings.tenant_data.$tenant.displayname || settings.database.displayname || 'Default') | html_entity %]</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      [% FOREACH t IN settings.tenant_tags %]
+      [% NEXT IF tenant AND t == tenant %]
+      [% NEXT IF NOT tenant and t == 'netdisco' %]
+      <li><a class="dropdown-item nd_navtenant" href=""
+        data-currenttenant="[% settings.tenant_data.$tenant.path || settings.tenant_data.netdisco.path %]"
+        data-tenantpath="[% settings.tenant_data.$t.path %]"
+        data-tenant="[% t %]">[% settings.tenant_data.$t.displayname | html_entity %]</a></li>
+      [% END %]
+    </ul>
+  </div>
+  [% END %]
+
+  [% INCLUDE 'layouts/_web_ui_switch.tt' target = 'classic' %]
+
+  <div class="dropdown">
+    <button class="nd2-avatar" data-bs-toggle="dropdown" aria-expanded="false"
+      title="[% session.logged_in_fullname || session.logged_in_user | html_entity %]"
+      data-nd-role="[% IF user_has_role('admin') %]admin[% ELSIF user_has_role('port_control') %]port_control[% END %]">
+      [% SET who = session.logged_in_fullname || session.logged_in_user %][% who.substr(0, 2).upper | html_entity %]
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><h6 class="dropdown-header">[% session.logged_in_fullname || session.logged_in_user | html_entity %]</h6></li>
+    [% IF NOT ( settings.no_auth OR user_has_role('ldap') OR user_has_role('radius') ) %]
+      <li><a class="dropdown-item" href="[% uri_for('/password') | none %]">Change Password</a></li>
+    [% END %]
+      <li><a class="dropdown-item" href="[% uri_for('/swagger-ui') | none %]" target="_blank">Browse the API</a></li>
+    [% IF user_has_role('admin') %]
+      <li><a class="dropdown-item" href="https://github.com/netdisco/netdisco/wiki/Configuration" target="_blank">Configuration Reference</a></li>
+    [% END %]
+    [% IF NOT settings.no_auth %]
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="[% uri_for('/logout') | none %]">Log Out</a></li>
+    [% END %]
+    </ul>
+  </div>
+  [% END %]
+</header>
+
+<main class="nd2-main">
+[% content | none %]
+</main>
+
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/htmx.min.js?v=[% asset_version | none %]"></script>
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-request.js?v=[% asset_version | none %]"></script>
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-toast.js?v=[% asset_version | none %]"></script>
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco.js?v=[% asset_version | none %]"></script>
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-typeahead.js?v=[% asset_version | none %]"></script>
+[% IF task %]<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-admin.js?v=[% asset_version | none %]"></script>[% END %]
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-tables.js?v=[% asset_version | none %]"></script>
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-daterange.js?v=[% asset_version | none %]"></script>
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-netmap.js?v=[% asset_version | none %]"></script>
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-deferred-nodes.js?v=[% asset_version | none %]"></script>
+<script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-portcontrol.js?v=[% asset_version | none %]"></script>
+<script type="module" src="[% uri_base | none %]/modern/js/shell.js?v=[% asset_version | none %]"></script>
+
+[% FOREACH add_js IN settings._additional_javascript %]
+<script type="text/javascript" src="[% uri_base | none %]/plugin/[% add_js | none %]/[% add_js | none %].js?v=[% asset_version | none %]"></script>
+[% END %]
+
+</body>
+</html>

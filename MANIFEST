@@ -248,6 +248,7 @@ lib/App/Netdisco/Web/Static.pm
 lib/App/Netdisco/Web/Statistics.pm
 lib/App/Netdisco/Web/Theme.pm
 lib/App/Netdisco/Web/TypeAhead.pm
+lib/App/Netdisco/Web/UI.pm
 lib/App/Netdisco/Worker/Actions.pm
 lib/App/Netdisco/Worker/Loader.pm
 lib/App/Netdisco/Worker/Plugin.pm
@@ -390,6 +391,8 @@ share/public/javascripts/netdisco-typeahead.js
 share/public/javascripts/netdisco.js
 share/public/javascripts/portsort.js
 share/public/javascripts/versionsort.js
+share/public/modern/css/modern.css
+share/public/modern/js/shell.js
 share/public/swagger-ui/favicon-16x16.png
 share/public/swagger-ui/favicon-32x32.png
 share/public/swagger-ui/LICENSE
@@ -534,6 +537,7 @@ share/schema_versions/App-Netdisco-DB-96-97-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-97-98-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-98-99-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-99-100-PostgreSQL.sql
+share/views-modern/layouts/main.tt
 share/views/admintask.tt
 share/views/ajax/admintask/acleditor.tt
 share/views/ajax/admintask/aclmanager.tt
@@ -631,6 +635,7 @@ share/views/device.tt
 share/views/externallinks.tt
 share/views/index.tt
 share/views/inventory.tt
+share/views/layouts/_web_ui_switch.tt
 share/views/layouts/main.tt
 share/views/layouts/noop.tt
 share/views/password.tt
@@ -710,6 +715,10 @@ xt/143-api-custom-field-role-scope.t
 xt/144-portctl-topology-gate.t
 xt/145-topology-del-only-matched.t
 xt/146-snmp-incomplete-walk-arg.t
+xt/140-web-ui-resolve.t
+xt/141-web-ui-app.t
+xt/142-web-ui-bad-default.t
+xt/143-web-ui-modern-layout.t
 xt/20-checkacl.t
 xt/21-check_acl_no_ipaddr_only.t
 xt/30-backend-workers.t
@@ -791,6 +800,7 @@ xt/js/deferred-nodes.test.js
 xt/js/disco-queue.test.js
 xt/js/error-reporter.test.js
 xt/js/history-ownership.test.js
+xt/js/modern-shell.test.js
 xt/js/navbar-submenu.test.js
 xt/js/netmap-autosave.test.js
 xt/js/netmap-legend.test.js

@@ -1,0 +1,15 @@
+[%# The button that moves this browser to the other web interface. Shared by
+    both layouts, so it lives with the classic views that the modern overlay
+    falls back to. The same URL works in either interface, so the switch
+    returns to the page it was pressed on, which the route reads from the
+    Referer header rather than from a field here (see back_from_referer). -%]
+<form method="post" class="nd_inline-form nd_web-ui-switch" action="[% uri_for('/web_ui') | none %]">
+  <input type="hidden" name="ui" value="[% target | html_entity %]">
+  [% IF target == 'classic' %]
+  <button type="submit" class="nd2-topbar-btn" title="Switch this browser back to the classic interface">
+    <i class="fas fa-clock-rotate-left"></i><span class="nd2-hide-sm">Classic UI</span>
+  </button>
+  [% ELSE %]
+  <button type="submit" class="dropdown-item" title="Switch this browser to the new interface">Try the new interface</button>
+  [% END %]
+</form>

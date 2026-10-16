@@ -50,6 +50,7 @@ ldap: {}
 path: '/'
 web_home: '/inventory'
 web_theme: auto
+default_web_ui: classic
 web_plugins:
   - Inventory
   - Report::PortVLANMismatch
