@@ -179,9 +179,13 @@ lib/App/Netdisco/Web/API/Objects.pm
 lib/App/Netdisco/Web/API/Queue.pm
 lib/App/Netdisco/Web/API/Statistics.pm
 lib/App/Netdisco/Web/API/User.pm
+lib/App/Netdisco/Web/API/V2.pm
 lib/App/Netdisco/Web/Auth/Provider/DBIC.pm
 lib/App/Netdisco/Web/AuthN.pm
 lib/App/Netdisco/Web/CustomFields.pm
+lib/App/Netdisco/Web/Data.pm
+lib/App/Netdisco/Web/Data/Device.pm
+lib/App/Netdisco/Web/Data/Ports.pm
 lib/App/Netdisco/Web/Device.pm
 lib/App/Netdisco/Web/GenericReport.pm
 lib/App/Netdisco/Web/Health.pm
@@ -742,6 +746,9 @@ xt/500-web-ui-resolve.t
 xt/501-web-ui-app.t
 xt/502-web-ui-bad-default.t
 xt/503-web-ui-modern-layout.t
+xt/504-data-normalize.t
+xt/505-data-routes.t
+xt/506-hidden-device-ports.t
 xt/51-updated-device-hook.t
 xt/52-token-acl-auth.t
 xt/53-ports-csv-arity.t
