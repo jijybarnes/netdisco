@@ -1,0 +1,83 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Test::More 0.88;
+use Template::AutoFilter;
+
+# xt/141 renders the modern layout through the app, but only signed out: the
+# signed-in half needs a session the DBIC auth provider cannot give a test (see
+# xt/36). That half is the rail, the menus and the switch back to classic, so it
+# is rendered here directly, with the overlay in front of share/views exactly
+# as the app arranges it.
+
+my $tt = Template::AutoFilter->new({
+  INCLUDE_PATH => [ 'share/views-modern', 'share/views' ],
+  START_TAG    => quotemeta('[%'),
+  END_TAG      => quotemeta('%]'),
+  ANYCASE      => 1,
+  ABSOLUTE     => 1,
+  PRE_CHOMP    => 1,
+  AUTO_FILTER  => 'html_entity',
+  ENCODING     => 'utf8',
+}) or die Template->error;
+
+# The layout reads settings._reports and friends, which Template Toolkit hides
+# as private unless told otherwise, as lib/App/Netdisco/Web.pm does. After new()
+# rather than before: building the engine loads Template::Stash, which resets it.
+$Template::Stash::PRIVATE = undef;
+
+my %roles = (admin => 1);
+my $stash = {
+  content   => '<div id="xt-page-content"></div>',
+  session   => { logged_in_user => 'jdoe', logged_in_fullname => 'Jane Doe' },
+  vars      => { nav => 'reports' },
+  request   => { request_uri => '/device?q=10.0.0.1&tab=ports' },
+  uri_base  => '',
+  uri_for   => sub { $_[0] },
+  user_has_role => sub { $roles{ $_[0] } },
+  settings  => {
+    branding_text  => 'Netdisco',
+    _navbar_items  => [ { tag => 'inventory', path => '/inventory', label => 'Inventory' } ],
+    _report_order  => [ 'Port', 'Node' ],
+    _reports_menu  => { Port => [ 'duplexmismatch', 'hiddenone' ], Node => [] },
+    _reports       => {
+      duplexmismatch => { label => 'Mismatched Duplex' },
+      hiddenone      => { label => 'Hidden One', hidden => 1 },
+    },
+    _admin_order   => [ 'jobqueue', 'divider', 'users' ],
+    _admin_tasks   => { jobqueue => { label => 'Job Queue' }, users => { label => 'User Management' } },
+  },
+};
+
+my $html = '';
+$tt->process('layouts/main.tt', $stash, \$html) or die $tt->error;
+
+like $html, qr/<html [^>]*data-nd-ui="modern"/, 'modernLayout__signed_in__marks_the_page_modern';
+like $html, qr/<body class="nd2 nd2-signed-in"/, 'modernLayout__signed_in__marks_the_body_for_the_rail_offset';
+like $html, qr/id="xt-page-content"/, 'modernLayout__signed_in__renders_the_page_content';
+
+like $html, qr{class="nd2-rail-item" href="/inventory"}, 'modernLayout__navbar_item__becomes_a_rail_item';
+like $html, qr{class="nd2-rail-item active"[^>]*>\s*<i class="fas fa-chart-column"}s,
+  'modernLayout__nav_reports__marks_the_reports_rail_item_active';
+like $html, qr{href="/report/duplexmismatch\?firstsearch=on">Mismatched Duplex</a>},
+  'modernLayout__visible_report__is_listed_in_the_reports_menu';
+unlike $html, qr/Hidden One/, 'modernLayout__hidden_report__is_left_out';
+unlike $html, qr{<h6>Node</h6>}, 'modernLayout__empty_report_category__has_no_heading';
+
+like $html, qr{action="/admin/discoverall"}, 'modernLayout__admin__gets_the_run_on_all_devices_forms';
+like $html, qr{href="/admin/users\?firstsearch=on">User Management</a>}, 'modernLayout__admin__lists_the_admin_tasks';
+
+like $html, qr{name="ui" value="classic"}, 'modernLayout__switch__targets_the_classic_interface';
+# the route returns to the Referer; a field would echo the request URI (xt/76)
+unlike $html, qr{/device\?q=10\.0\.0\.1}, 'modernLayout__switch__does_not_echo_the_request_uri';
+
+like $html, qr{data-nd-role="admin"[^>]*>\s*JA\s*</button>}s, 'modernLayout__avatar__shows_two_initials_and_the_role';
+
+%roles = ();
+my $plain = '';
+$tt->process('layouts/main.tt', $stash, \$plain) or die $tt->error;
+unlike $plain, qr{/admin/discoverall}, 'modernLayout__not_admin__has_no_admin_menu';
+
+done_testing;
