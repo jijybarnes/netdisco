@@ -10,7 +10,7 @@ use App::Netdisco::Web::Data qw/problem json_bool iso8601_sql speed_to_bps/;
 use base 'Exporter';
 our @EXPORT_OK = qw/
   device_ports device_port port_nodes
-  normalize_port normalize_node port_status ports_overview
+  normalize_port normalize_node port_status ports_overview normalize_control
 /;
 
 =head1 NAME
@@ -47,11 +47,36 @@ sub port_status {
 sub _str { my $v = shift; (defined $v and length $v) ? "$v" : undef }
 sub _int { my $v = shift; (defined $v and $v =~ m/^-?\d+$/) ? 0 + $v : undef }
 
+=head2 normalize_control( \%allowed, $has_poe )
+
+Pure: what the signed in user may change on one port, as the API shows it.
+C<%allowed> holds the three decisions the port control ACLs make: C<service>
+(admin status and PoE), C<pvid> (the native VLAN) and C<name> (the name and
+description). C<undef> in, C<undef> out: a user without port control is told
+nothing, rather than a list of refusals.
+
+PoE can only be switched on a port that has a PoE row, and by whoever may
+change its admin status, as in the classic tab.
+
+=cut
+
+sub normalize_control {
+  my ($allowed, $has_poe) = @_;
+  return undef unless $allowed;
+  return {
+    admin_status => json_bool($allowed->{service}),
+    poe          => json_bool($allowed->{service} and $has_poe),
+    native_vlan  => json_bool($allowed->{pvid}),
+    name         => json_bool($allowed->{name} || $allowed->{service}),
+  };
+}
+
 =head2 normalize_port( \%columns, \%extra )
 
 Pure: one port's columns (C<device_port>, plus what L</device_ports> joins in)
 to the API shape. C<%extra> carries what comes from other queries: C<vlans>,
-the port's VLAN numbers, and C<node_count>, its active nodes.
+the port's VLAN numbers, C<node_count>, its active nodes, and C<control>, the
+port control decisions for the signed in user (see L</normalize_control>).
 
 =cut
 
@@ -120,6 +145,7 @@ sub normalize_port {
     } : undef),
 
     node_count    => 0 + ($extra->{node_count} || 0),
+    control       => normalize_control($extra->{control}, $has_poe),
     tags          => [ @{ $c->{tags} || [] } ],
     custom_fields => (ref {} eq ref $custom ? $custom : {}),
   };
@@ -175,6 +201,12 @@ sub _node_counts_by_port {
 Every port of C<$device>, in the order the classic tab sorts them, without the
 ports C<hide_deviceports> hides unless C<include_hidden> is true.
 
+C<control>, if given, is a code ref called with each port's row. It returns
+the three port control decisions for the signed in user (see
+L</normalize_control>), or C<undef> for a user who has no port control. It is
+passed in because the decisions need the session, which this module does not
+know about.
+
 =cut
 
 sub device_ports {
@@ -192,19 +224,21 @@ sub device_ports {
   return [ map {
     normalize_port({ $_->get_columns }, {
       vlans => $vlans->{ $_->port }, node_count => $counts->{ $_->port },
+      control => ($opts{control} ? $opts{control}->($_) : undef),
     })
   } @rows ];
 }
 
-=head2 device_port( $schema, $device, $port )
+=head2 device_port( $schema, $device, $port, %opts )
 
 One port, hidden or not: a client asking for it by name already knows it is
-there. Stops the route with a 404 if the device has no such port.
+there. Stops the route with a 404 if the device has no such port. Takes the
+same C<control> option as L</device_ports>.
 
 =cut
 
 sub device_port {
-  my ($schema, $device, $name) = @_;
+  my ($schema, $device, $name, %opts) = @_;
   my $row = _port_rs($device)->search({ 'me.port' => $name })->single
     or problem(404, 'Port not found',
          sprintf q{Device %s has no port '%s'.}, $device->ip, $name);
@@ -215,6 +249,7 @@ sub device_port {
   return normalize_port({ $row->get_columns }, {
     vlans => _vlans_by_port($schema, $device, $name)->{ $name },
     node_count => $count,
+    control => ($opts{control} ? $opts{control}->($row) : undef),
   });
 }
 

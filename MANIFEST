@@ -185,6 +185,7 @@ lib/App/Netdisco/Web/AuthN.pm
 lib/App/Netdisco/Web/CustomFields.pm
 lib/App/Netdisco/Web/Data.pm
 lib/App/Netdisco/Web/Data/Device.pm
+lib/App/Netdisco/Web/Data/Jobs.pm
 lib/App/Netdisco/Web/Data/Ports.pm
 lib/App/Netdisco/Web/Device.pm
 lib/App/Netdisco/Web/DeviceOverview.pm
@@ -399,8 +400,12 @@ share/public/javascripts/portsort.js
 share/public/javascripts/versionsort.js
 share/public/modern/css/modern.css
 share/public/modern/js/device.js
+share/public/modern/js/drawer.js
+share/public/modern/js/jobs-core.js
+share/public/modern/js/jobs.js
 share/public/modern/js/ports.js
 share/public/modern/js/shell.js
+share/public/modern/js/time.js
 share/public/swagger-ui/favicon-16x16.png
 share/public/swagger-ui/favicon-32x32.png
 share/public/swagger-ui/LICENSE
@@ -738,6 +743,7 @@ xt/146-hidden-device-ports.t
 xt/147-device-overview-data.t
 xt/148-device-overview-templates.t
 xt/149-ports-modern.t
+xt/150-jobs-and-reasons.t
 xt/20-checkacl.t
 xt/21-check_acl_no_ipaddr_only.t
 xt/30-backend-workers.t
@@ -820,6 +826,8 @@ xt/js/disco-queue.test.js
 xt/js/error-reporter.test.js
 xt/js/history-ownership.test.js
 xt/js/modern-device.test.js
+xt/js/modern-drawer.test.js
+xt/js/modern-jobs.test.js
 xt/js/modern-ports.test.js
 xt/js/modern-shell.test.js
 xt/js/navbar-submenu.test.js
