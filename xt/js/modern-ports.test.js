@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import {
   isPhysical, faceplateLayout, vlanSlots, portLook, legendFor, CHIPS, matchesText,
   filterPorts, sortPorts, COLUMNS, usableColumns, visibleColumns, loadPrefs, savePrefs,
-  portLabel, DEFAULT_COLUMNS, setTabCount, COLUMN_ORDER, COLUMN_LABEL,
+  portLabel, DEFAULT_COLUMNS, setTabCount, COLUMN_ORDER, COLUMN_LABEL, isFoldedSubinterface, customColumn,
+  viewOptions,
 } from '../../share/public/modern/js/ports.js';
 
 const port = (name, extra = {}) => ({
@@ -103,7 +104,71 @@ test('filterPorts: chips combine with each other and with the text', () => {
   assert.deepEqual(names({ chips: new Set(['poe']) }), ['Ethernet6'], 'a PoE port drawing nothing is not powered');
   assert.deepEqual(names({ chips: new Set(['nodes', 'up']) }), ['Ethernet2', 'Ethernet3']);
   assert.deepEqual(names({ chips: new Set(['neighbors']), q: 'trunk' }), ['Ethernet1']);
-  assert.equal(CHIPS.length, 7);
+  assert.equal(CHIPS.length, 8);
+  assert.deepEqual(filterPorts([{ port: 'a', is_free: true }, { port: 'b', is_free: false }, { port: 'c', is_free: null }],
+    { chips: new Set(['free']) }).map((p) => p.port), ['a'], 'free is what the API says, never guessed');
+});
+
+test('filterPorts: -word leaves out, * stands for anything, as the classic Not and wildcards', () => {
+  const names = (q) => filterPorts(lab, { q }).map((p) => p.port);
+  const all = lab.map((p) => p.port);
+  assert.deepEqual(names('-trunk'), all.filter((n) => !names('trunk').includes(n)));
+  assert.deepEqual(names('ether*3'), ['Ethernet3']);
+  assert.deepEqual(names('-'), names(''), 'a lone dash is a -word being typed: it neither leaves out nor looks for anything');
+});
+
+test('filterPorts: a port is found by its comment, SSID, custom fields and VLAN names', () => {
+  const ps = [{ port: 'a', last_comment: 'patched to 2.14' }, { port: 'b', ssids: ['corp-wifi'] },
+    { port: 'c', custom_fields: { room: 'B12' } }, { port: 'd', native_vlan: 40 }];
+  const names = (q, vlans) => filterPorts(ps, { q, vlans }).map((p) => p.port);
+  assert.deepEqual(names('patched'), ['a']);
+  assert.deepEqual(names('corp-wifi'), ['b']);
+  assert.deepEqual(names('b12'), ['c']);
+  assert.deepEqual(names('cctv', [{ vlan: 40, name: 'CCTV' }]), ['d']);
+});
+
+test('filterPorts: folding leaves out a subinterface whose parent is listed, as the classic tab folds it', () => {
+  const ps = [{ port: 'Gi1/0/1' }, { port: 'Gi1/0/1.20' }, { port: 'Gi1/0/2.30' }];
+  assert.deepEqual(filterPorts(ps, { view: { foldSubinterfaces: true } }).map((p) => p.port), ['Gi1/0/1', 'Gi1/0/2.30'],
+    'an orphan stays: there is nothing to fold it under');
+  assert.equal(filterPorts(ps, { view: {} }).length, 3);
+  assert.equal(isFoldedSubinterface({ port: 'Gi1/0/1.20' }, new Set(['Gi1/0/1'])), true);
+});
+
+test('cells: VLAN names, VLANs 1002-1005 and the MAC format follow the View menu', () => {
+  const p = { port: 'x', native_vlan: 40, vlans: [40, 1002, 1005, 1006], mac: '00:1a:2b:3c:4d:5e' };
+  const vlans = [{ vlan: 40, name: 'CCTV' }];
+  const text = (col, view) => COLUMNS[col].cells(p, new Set(), { vlans, view }).map((x) => x.text);
+  assert.deepEqual(text('c_pvid', {}), ['40']);
+  assert.equal(COLUMNS.c_pvid.cells(p, new Set(), { vlans, view: {} })[0].title, 'CCTV', 'the name in the tooltip');
+  assert.deepEqual(text('c_pvid', { vlanNames: true }), ['CCTV']);
+  assert.deepEqual(text('c_vmember', { hide1002: true }), ['40', '1006']);
+  assert.deepEqual(text('c_vmember', {}), ['40', '1002', '1005', '1006']);
+  assert.deepEqual(text('c_mac', { macFormat: 'Cisco' }), ['001a.2b3c.4d5e']);
+  assert.deepEqual(COLUMNS.c_pvid.cells(p).map((x) => x.text), ['40'], 'without a context, the number');
+});
+
+test('cells: last comment, SSID, 802.1X and custom fields', () => {
+  assert.deepEqual(COLUMNS.c_comment.cells({ last_comment: 'patched' }).map((x) => x.text), ['patched']);
+  assert.deepEqual(COLUMNS.c_ssid.cells({ ssids: ['a', 'b'] }).map((x) => x.text), ['a, b']);
+  const nac = { oper_status: 'up', nac: { port_status: 'authorized', state: 'authenticated', user: 'alice', is_mab: false } };
+  assert.deepEqual(COLUMNS.c_nac_summary.cells(nac).map((x) => x.text), ['authorized', '802.1X alice']);
+  assert.equal(COLUMNS.c_nac_summary.cells(nac)[0].status, 'up');
+  assert.deepEqual(COLUMNS.c_nac_summary.cells({ ...nac, oper_status: 'down' }).map((x) => x.text), ['—'], 'only on a linked port');
+  assert.deepEqual(customColumn('room').cells({ custom_fields: { room: 'B12' } }).map((x) => x.text), ['B12']);
+  assert.deepEqual(customColumn('room').cells({}).map((x) => x.text), ['—']);
+  assert.ok(usableColumns([{ name: 'room', label: 'Room', custom: true }, { name: 'plugin_col', label: 'P' }])
+    .some((c) => c.name === 'room'), 'a custom field column is drawn; another plugin column is not');
+  assert.ok(!usableColumns([{ name: 'plugin_col', label: 'P' }]).length);
+});
+
+test('viewOptions: the browser, else the site, else the classic defaults; nothing odd kept', () => {
+  assert.deepEqual(viewOptions(undefined), { foldSubinterfaces: false, vlanNames: false, hide1002: false, macFormat: 'IEEE', freeAge: 3, freeUnit: 'months' });
+  assert.equal(viewOptions({}, { vlanNames: true }).vlanNames, true);
+  assert.equal(viewOptions({ vlanNames: false }, { vlanNames: true }).vlanNames, false, 'the browser wins');
+  assert.equal(viewOptions({ macFormat: '<b>' }).macFormat, 'IEEE');
+  assert.equal(viewOptions({ freeAge: 99 }, { freeAge: 2 }).freeAge, 2);
+  assert.equal(viewOptions({ freeUnit: 'hours' }).freeUnit, 'months');
 });
 
 test('sortPorts: stable, empty values last both ways, port column is API order', () => {

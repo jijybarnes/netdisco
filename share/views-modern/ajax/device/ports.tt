@@ -6,6 +6,8 @@
   data-nd2-src="[% uri_base | none %]/ajax/data/v2/devices/[% device_ip | uri %]/ports"
   data-nd2-api="[% uri_base | none %]/ajax/data/v2"
   data-nd2-device="[% device_ip | html_entity %]"
+  data-nd2-device-name="[% device_name | html_entity %]"
+  data-nd2-view="[% view_defaults | html_entity %]"
   data-nd2-model="[% model | html_entity %]"
   data-nd2-reasons="[% reasons | html_entity %]"
   data-nd2-filter="[% port_filter | html_entity %]"
@@ -20,14 +22,48 @@
     </label>
     <div class="nd2-chips" role="group" aria-label="Show only">
       [% FOREACH chip IN [ ['up', 'Up'], ['down', 'Down'], ['disabled', 'Disabled'], ['issues', 'Issues'],
-                           ['nodes', 'Has nodes'], ['neighbors', 'Neighbors'], ['poe', 'PoE'] ] %]
+                           ['nodes', 'Has nodes'], ['neighbors', 'Neighbors'], ['poe', 'PoE'], ['free', 'Free'] ] %]
       <button type="button" class="nd2-chip" data-chip="[% chip.0 | html_entity %]" aria-pressed="false">[% chip.1 | html_entity %]</button>
       [% END %]
     </div>
     <div class="nd2-toolbar-end">
-      <label class="nd2-check" title="Include the ports the hide_deviceports setting hides">
-        <input type="checkbox" class="nd2-ports-hidden"> Hidden ports
-      </label>
+      [%# the classic sidebar's display options -%]
+      <div class="dropdown">
+        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle"
+          data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+          <i class="fas fa-sliders" aria-hidden="true"></i> View
+        </button>
+        <div class="dropdown-menu dropdown-menu-end nd2-colpick nd2-viewmenu">
+          <label title="Include the ports the hide_deviceports setting hides">
+            <input type="checkbox" class="nd2-ports-hidden"> Hidden ports</label>
+          <label><input type="checkbox" data-nd2-view="foldSubinterfaces"> Fold subinterfaces
+            <span class="nd2-muted nd2-view-folded"></span></label>
+          <label><input type="checkbox" data-nd2-view="vlanNames"> VLAN names, not numbers</label>
+          <label><input type="checkbox" data-nd2-view="hide1002"> Hide VLANs 1002–1005</label>
+          <hr class="dropdown-divider">
+          <div class="nd2-viewmenu-row">
+            <label for="nd2-view-mac">MAC as</label>
+            <select id="nd2-view-mac" class="form-select form-select-sm" data-nd2-view="macFormat">
+              [% FOREACH f IN [ 'IEEE', 'Cisco', 'Microsoft', 'Sun' ] %]
+              <option value="[% f | html_entity %]">[% f | html_entity %]</option>
+              [% END %]
+            </select>
+          </div>
+          <div class="nd2-viewmenu-row" title="A port that is enabled but has had no link for this long is shown as free">
+            <label for="nd2-view-age">Free if down for</label>
+            <span class="nd2-viewmenu-pair">
+              <select id="nd2-view-age" class="form-select form-select-sm" data-nd2-view="freeAge">
+                [% FOREACH n IN [1..31] %]<option value="[% n %]">[% n %]</option>[% END %]
+              </select>
+              <select class="form-select form-select-sm" data-nd2-view="freeUnit" aria-label="Unit">
+                [% FOREACH u IN [ 'days', 'weeks', 'months', 'years' ] %]
+                <option value="[% u | html_entity %]">[% u | html_entity %]</option>
+                [% END %]
+              </select>
+            </span>
+          </div>
+        </div>
+      </div>
       <div class="dropdown">
         <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle"
           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
