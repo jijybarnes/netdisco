@@ -1,0 +1,32 @@
+[%# The Devices page (App::Netdisco::Web::DevicesPage): a shell that
+    share/public/modern/js/devices.js fills from API v2. The search, filter
+    and order are read back from the address by the script, which also keeps
+    them there. -%]
+<div class="nd2-page">
+  <header class="nd2-page-head">
+    <h1>Devices</h1>
+    <p class="nd2-muted nd2-dev-summary" aria-live="polite">Loading the devices…</p>
+  </header>
+
+  <div data-nd2-devices data-nd2-src="[% uri_base | none %]/ajax/data/v2/devices">
+    <div class="nd2-toolbar" role="search">
+      <label class="nd2-filter">
+        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+        <input class="nd2-devices-search" type="search" autocomplete="off"
+          placeholder="Filter by name, address, model, software, location…" aria-label="Filter devices">
+        <kbd class="nd2-kbd" aria-hidden="true">F</kbd>
+      </label>
+      <div class="nd2-chips" role="group" aria-label="Show only">
+        <button type="button" class="nd2-chip" data-chip="failing" aria-pressed="false">Unreachable <span class="nd2-chip-n"></span></button>
+      </div>
+    </div>
+
+    <div class="nd2-tablewrap">
+      <table class="nd2-devices-table nd2-ports-table"><tbody><tr><td class="nd2-empty">Loading the devices…</td></tr></tbody></table>
+    </div>
+    <div class="nd2-tablefoot">
+      <button type="button" class="btn btn-outline-secondary btn-sm nd2-devices-more" hidden>Show more</button>
+      <span class="nd2-hint">Select a device to open it</span>
+    </div>
+  </div>
+</div>

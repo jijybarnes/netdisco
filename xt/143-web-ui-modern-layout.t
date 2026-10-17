@@ -33,6 +33,8 @@ my $stash = {
   content   => '<div id="xt-page-content"></div>',
   session   => { logged_in_user => 'jdoe', logged_in_fullname => 'Jane Doe' },
   vars      => { nav => 'reports' },
+  nd2_nav   => 'reports',
+  nd2_crumbs => [ { label => 'Reports' }, { label => 'Port' }, { label => 'Mismatched <Duplex>' } ],
   request   => { request_uri => '/device?q=10.0.0.1&tab=ports' },
   uri_base  => '',
   uri_for   => sub { $_[0] },
@@ -80,6 +82,24 @@ like $html, qr{<div class="dropdown nd2-jobs" data-nd2-jobs data-nd2-src="/ajax/
 like $html, qr{class="nd2-badge" hidden}, 'modernLayout__jobs_badge__hidden_until_something_is_running';
 like $html, qr{<a href="/admin/jobqueue\?firstsearch=on">Whole queue</a>}, 'modernLayout__admin__links_the_whole_queue';
 like $html, qr{/modern/js/jobs\.js\?v=}, 'modernLayout__signed_in__loads_the_jobs_script';
+
+like $html, qr{class="nd2-rail-item" href="/devices">\s*<i class="fas fa-server"></i><span>Devices</span>},
+  'modernLayout__rail__has_the_devices_list';
+like $html, qr{<button type="button" class="nd2-rail-item nd2-rail-btn" data-nd2-theme},
+  'modernLayout__rail__has_the_theme_button';
+like $html, qr{netdisco-theme\.js\?v=[^"]*"></script>\s*<script src="/modern/js/theme-pref\.js},
+  'modernLayout__head__puts_the_browsers_theme_in_force_right_after_the_resolver';
+like $html, qr{<nav class="nd2-crumbs" aria-label="Breadcrumb"><ol>},
+  'modernLayout__crumbs__a_breadcrumb_landmark';
+like $html, qr{<li aria-current="page">Mismatched &lt;Duplex&gt;</li>},
+  'modernLayout__crumbs__the_last_is_the_page_escaped';
+unlike $html, qr{<a href="[^"]*">Reports</a>}, 'modernLayout__crumbs__a_crumb_with_no_page_is_not_a_link';
+
+my $device_page = '';
+$tt->process('layouts/main.tt', { %$stash, nd2_nav => 'devices',
+  nd2_crumbs => [ { label => 'Devices', href => '/devices' }, { label => 'sw1' } ] }, \$device_page) or die $tt->error;
+like $device_page, qr{class="nd2-rail-item active" href="/devices"}, 'modernLayout__on_a_device__devices_lit';
+like $device_page, qr{<li><a href="/devices">Devices</a></li>}, 'modernLayout__crumbs__a_crumb_with_a_page_links_to_it';
 
 %roles = ();
 my $plain = '';

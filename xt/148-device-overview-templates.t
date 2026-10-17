@@ -61,6 +61,20 @@ like $page, qr{id="overview_form"[^>]*hx-get="/ajax/content/device/overview"}s,
 like $page, qr{class="nav-link active" id="overview_link"}, 'devicePage__tab_param__marks_that_tab_active';
 unlike $page, qr{hidden_link|hidden_form}, 'devicePage__tab_not_rendered__has_neither_link_nor_form';
 
+like $page, qr{nd2-st nd2-st-up nd2-health"[^>]*><i aria-hidden="true"></i>Reachable}, 'devicePage__no_failure__reachable';
+
+my $counted = render('device.tt', { nd2_device => { %$device,
+    counts => { ports => 52, addresses => 0, vlans => 6, modules => 14, neighbors => 3 },
+    health => { state => 'failing', deferrals => 4, last_failure_at => '2026-10-16T09:00:00+02:00' } },
+  display_name => 'sw1', netdisco_device => {},
+  settings => { _device_tabs => [ map {{ tag => $_, label => ucfirst, render_if => sub { 1 } }} qw/overview details ports addresses vlans netmap/ ] } });
+like $counted, qr{id="ports_link"[^>]*>Ports<span class="nd2-n">52</span></a>}, 'devicePage__tab_counts__ports';
+like $counted, qr{id="netmap_link"[^>]*>Netmap<span class="nd2-n">3</span></a>}, 'devicePage__tab_counts__the_neighbors_tab_is_the_netmap';
+like $counted, qr{id="addresses_link"[^>]*>Addresses</a>}, 'devicePage__tab_counts__none_at_zero';
+like $counted, qr{id="details_link"[^>]*>Details</a>}, 'devicePage__tab_counts__none_for_a_tab_that_lists_nothing';
+like $counted, qr{nd2-st-errdisabled nd2-health" title="The backend could not reach this device 4 times in a row, the last on 2026-10-16T09:00:00\+02:00\. See Admin, SNMP Connect Failures\."><i aria-hidden="true"></i>Unreachable},
+  'devicePage__failing__unreachable_says_how_often_and_where_to_look';
+
 %roles = ();
 unlike render('device.tt', { nd2_device => $device, display_name => 'sw1', netdisco_device => {} }),
   qr{data-nd2-job}, 'devicePage__not_admin__no_poll_buttons';
