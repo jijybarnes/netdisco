@@ -45,6 +45,7 @@ my $shell = '';
 $tt->process('ajax/device/ports.tt', {
   uri_base    => '/nd',
   device_ip   => 'fe80::1',
+  model       => 'C9300-48P <x>',
   port_filter => '"><script>alert(1)</script>',
   columns     => JSON::PP->new->canonical->encode([ { name => 'c_port', label => 'Port <b>', default => JSON::PP::true } ]),
   reasons     => JSON::PP->new->canonical->encode([ { value => 'other', label => 'Other "x"' } ]),
@@ -57,6 +58,7 @@ like $shell, qr{data-nd2-filter="&quot;&gt;&lt;script&gt;alert\(1\)&lt;/script&g
 like $shell, qr{data-nd2-columns="\[\{&quot;default&quot;:true,&quot;label&quot;:&quot;Port &lt;b&gt;&quot;},
   'portsShell__columns__json_escaped_into_its_attribute';
 is scalar(() = $shell =~ /data-chip="/g), 7, 'portsShell__chips__all_seven';
+like $shell, qr{data-nd2-model="C9300-48P &lt;x&gt;"}, 'portsShell__model__escaped_for_the_panel_label';
 like $shell, qr{data-nd2-api="/nd/ajax/data/v2"}, 'portsShell__api_base__under_the_site_base_for_the_drawers_nodes';
 like $shell, qr{data-nd2-device="fe80::1"}, 'portsShell__device__for_the_drawers_requests';
 is(($shell =~ m{data-nd2-reasons="([^"]*)"})[0],

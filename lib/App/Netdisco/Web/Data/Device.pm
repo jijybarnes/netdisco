@@ -7,7 +7,7 @@ use JSON::PP ();
 use App::Netdisco::Web::Data qw/problem json_bool iso8601_sql layers_list/;
 
 use base 'Exporter';
-our @EXPORT_OK = qw/find_device device_summary normalize_device normalize_poe/;
+our @EXPORT_OK = qw/find_device device_summary normalize_device normalize_poe normalize_health normalize_counts/;
 
 =head1 NAME
 
@@ -55,7 +55,68 @@ sub device_summary {
   my @modules = map {{ $_->get_columns }} $schema->resultset('DevicePower')
     ->search({ 'me.ip' => $device->ip })->with_poestats->all;
 
-  return { %{ normalize_device({ $row->get_columns }) }, poe => normalize_poe(\@modules) };
+  my $health = $schema->resultset('DeviceSkip')->search(
+    { 'me.device' => $device->ip, 'me.deferrals' => { '>' => 0 } },
+    { select => [ { max => 'me.deferrals' }, \iso8601_sql('MAX(me.last_defer)') ],
+      as => [qw/deferrals _iso_last_defer/] })->single;
+
+  my $c = { $row->get_columns };
+  my %counts = (
+    addresses => $device->device_ips->count,
+    vlans     => $device->vlans->count,
+    modules   => $device->modules->count,
+    neighbors => $schema->resultset('DevicePort')->search(
+      { 'me.ip' => $device->ip, 'me.remote_ip' => { '!=' => undef } },
+      { columns => ['remote_ip'], distinct => 1 })->count,
+  );
+
+  return {
+    %{ normalize_device($c) },
+    poe     => normalize_poe(\@modules),
+    health  => normalize_health($health ? { $health->get_columns } : undef),
+    counts  => normalize_counts($c, \%counts),
+  };
+}
+
+=head2 normalize_health( \%skip )
+
+Pure: whether the backend can reach the device, from the C<device_skip> rows
+the SNMP Connect Failures admin task lists (a device is failing while any of
+its rows has C<deferrals> above zero). C<%skip> carries the largest deferral
+count and the latest failure, or is C<undef> when there is no such row.
+
+=cut
+
+sub normalize_health {
+  my $skip = shift;
+  my $n = ($skip and defined $skip->{deferrals} and $skip->{deferrals} =~ m/^\d+$/) ? 0 + $skip->{deferrals} : 0;
+  return {
+    state           => ($n > 0 ? 'failing' : 'ok'),
+    deferrals       => $n,
+    last_failure_at => ($n > 0 && defined $skip->{_iso_last_defer} && length $skip->{_iso_last_defer})
+                         ? "$skip->{_iso_last_defer}" : undef,
+  };
+}
+
+=head2 normalize_counts( \%device, \%counted )
+
+Pure: how many of each thing the device page's tabs list. C<ports> is what the
+device reported at its last discover; the tab then shows the ports the site's
+C<hide_deviceports> leaves in, which can be fewer, so the browser corrects the
+count when the tab loads. The others are exact.
+
+=cut
+
+sub normalize_counts {
+  my ($device, $counted) = @_;
+  my $n = sub { my $v = shift; (defined $v and $v =~ m/^\d+$/) ? 0 + $v : 0 };
+  return {
+    ports     => $n->($device->{num_ports}),
+    addresses => $n->($counted->{addresses}),
+    vlans     => $n->($counted->{vlans}),
+    modules   => $n->($counted->{modules}),
+    neighbors => $n->($counted->{neighbors}),
+  };
 }
 
 =head2 normalize_poe( \@modules )

@@ -67,6 +67,7 @@ sub modern_ports_pane {
   if (request->is_ajax) {
     return template 'ajax/device/ports.tt', {
       device_ip => $device->ip,
+      model     => ($device->model // ''),
       # not 'filter': with ANYCASE that is the FILTER directive
       port_filter => scalar param('f'),
       columns   => JSON::PP->new->canonical->encode(port_column_offer(setting('port_columns'))),

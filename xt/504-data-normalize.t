@@ -104,7 +104,7 @@ is_deeply [ sort keys %$port ], [ sort qw/
   port descr name type ifindex mac mtu status admin_status oper_status
   error_disable_cause stp_state speed speed_bps speed_admin duplex duplex_admin
   native_vlan pvid vlans is_uplink is_master slave_of has_subinterfaces
-  last_change_at poe neighbor node_count control tags custom_fields
+  last_change_at poe neighbor node_count last_node control tags custom_fields
 / ], 'normalizePort__fields__are_the_documented_set';
 
 # ---- what the user may change ----

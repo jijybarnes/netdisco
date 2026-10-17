@@ -108,10 +108,55 @@ body.nd2.nd2-signed-in {
 
 .nd2-search {
   position: relative;
-  flex: 0 1 520px;
-  margin-right: auto;
+  flex: 0 1 440px;
   display: flex;
   align-items: center;
+}
+
+/* where the page is: the breadcrumb on the left, the search on the right */
+.nd2-crumbs {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.nd2-crumbs ol {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--nd2-muted);
+}
+
+.nd2-crumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nd2-crumbs li + li::before {
+  content: "/";
+  color: var(--nd2-border-strong);
+}
+
+.nd2-crumbs li[aria-current="page"] {
+  color: var(--nd2-text);
+  font-weight: 600;
+}
+
+.nd2-crumbs a {
+  color: inherit;
+}
+
+.nd2-crumbs a:hover {
+  color: var(--nd2-text);
 }
 
 .nd2-search > .fa-magnifying-glass {
@@ -270,6 +315,13 @@ body.nd2.nd2-signed-in {
 
 .nd2-rail-spacer {
   flex: 1;
+}
+
+/* the theme button is a button, drawn as the links above it */
+.nd2-rail-btn {
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
 
 /* the rail's Reports and Admin menus: every entry at once, in columns,
@@ -533,6 +585,26 @@ body.nd2.nd2-signed-in {
 }
 
 /* ---------- device page ---------- */
+
+/* how many each tab lists */
+.nd2-n {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--nd2-surface-2);
+  color: var(--nd2-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 17px;
+}
+
+.nd2-health {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--nd2-text-2);
+}
 
 .nd2-dev-head {
   display: flex;
@@ -1044,10 +1116,16 @@ body.nd2.nd2-signed-in {
   top: 0;
   z-index: 1;
   padding: 0;
+  color: var(--nd2-text-2);
+  font-weight: 600;
   background: var(--nd2-surface-2);
   border-bottom: 1px solid var(--nd2-border);
   white-space: nowrap;
   text-align: left;
+}
+
+th:not(:has(.nd2-th)) {
+  padding: 8px 12px;
 }
 
 .nd2-th {
@@ -1100,6 +1178,7 @@ body.nd2.nd2-signed-in {
 .nd2-num {
   text-align: right !important;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .nd2-strong {
@@ -1134,9 +1213,29 @@ body.nd2.nd2-signed-in {
 }
 
 .nd2-tablefoot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   padding: 8px 2px;
   color: var(--nd2-muted);
   font-size: 12.5px;
+}
+
+/* the chassis' own name, along its side */
+.nd2-unit {
+  flex: none;
+  color: #7d8796;
+  font: 10.5px var(--nd2-mono);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.nd2-filter .nd2-kbd {
+  position: static;
+}
+
+.nd2-filter:focus-within .nd2-kbd {
+  display: none;
 }
 
 @media (max-width: 760px) {
@@ -1507,4 +1606,85 @@ body.nd2.nd2-signed-in {
 
   .nd2-job { grid-template-columns: 90px minmax(0, 1fr); }
   .nd2-job > time { display: none; }
+}
+
+@media (max-width: 760px) {
+  /* the breadcrumb gives way to the search on a narrow screen; the page's own
+     heading says where you are */
+  .nd2-crumbs {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .nd2-tablefoot .nd2-hint,
+  .nd2-filter .nd2-kbd {
+    display: none;
+  }
+}
+
+/* ---------- a page of its own (Devices) ---------- */
+
+.nd2-page {
+  padding: 18px 24px 40px;
+}
+
+.nd2-page-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.nd2-page-head h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+
+.nd2-page-head p {
+  margin: 0;
+}
+
+/* .nd2-ports-table is the modern data table, named for the first one made */
+.nd2-devices-table td .nd2-sub {
+  display: block;
+  margin: 1px 0 0;
+  font-size: 12px;
+}
+
+.nd2-devices-table td > * + * {
+  margin-left: 0;
+}
+
+.nd2-devices-table tbody tr {
+  cursor: pointer;
+}
+
+.nd2-chip-n:not(:empty) {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--nd2-surface-2);
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .nd2-page {
+    padding: 12px 12px 84px;
+  }
+
+  .nd2-devices-table td[data-col="name"] {
+    grid-column: 1 / -1;
+    font-size: 14px;
+  }
+
+  .nd2-devices-table td[data-col="name"]::before {
+    display: none;
+  }
+
+  .nd2-devices-table td[data-col="location"] {
+    grid-column: 1 / -1;
+  }
 }

@@ -6,6 +6,7 @@
 <html data-nd-theme-default="[% settings._web_theme.name | html_entity %]" data-nd-theme-root="[% uri_base | none %]/theme/" data-nd-ui="modern">
 <head>
   <script src="[% uri_base | none %]/javascripts/netdisco-theme.js?v=[% asset_version | none %]"></script>
+  <script src="[% uri_base | none %]/modern/js/theme-pref.js?v=[% asset_version | none %]"></script>
   <meta http-equiv="Content-type" content="text/html; charset=[% settings.charset | html_entity %]" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="shortcut icon" href="[% uri_base | none %]/images/favicon.ico" type="image/x-icon">
@@ -30,6 +31,7 @@
   <link rel="stylesheet" href="[% uri_base | none %]/css/bootstrap-tree.css?v=[% asset_version | none %]"/>
   <link rel="stylesheet" href="[% uri_base | none %]/css/dataTables.bootstrap.css?v=[% asset_version | none %]"/>
   <link rel="stylesheet" href="[% uri_base | none %]/modern/css/modern.css?v=[% asset_version | none %]"/>
+  <link rel="stylesheet" href="[% uri_base | none %]/modern/css/skin.css?v=[% asset_version | none %]"/>
   <link rel="stylesheet" href="[% uri_base | none %]/css/nd_print.css?v=[% asset_version | none %]" media="print"/>
   [%- IF settings._web_theme %]
   <link rel="stylesheet" href="[% uri_base | none %]/theme.css?v=[% settings._web_theme.mtime | uri %]"/>
@@ -52,16 +54,18 @@
 [% IF session.logged_in_user %]
 <nav class="nd2-rail" aria-label="Main">
   <a class="nd2-rail-logo" href="[% uri_for('') | none %]" title="[% settings.branding_text | html_entity %]">nd</a>
-  <a class="nd2-rail-item" href="[% uri_for('') | none %]">
+  <a class="nd2-rail-item[% ' active' IF nd2_nav == 'home' %]" href="[% uri_for('') | none %]">
     <i class="fas fa-house"></i><span>Home</span></a>
+  <a class="nd2-rail-item[% ' active' IF nd2_nav == 'devices' %]" href="[% uri_for('/devices') | none %]">
+    <i class="fas fa-server"></i><span>Devices</span></a>
   [% FOREACH ni IN settings._navbar_items %]
-  <a class="nd2-rail-item[% ' active' IF vars.nav == ni.tag %]" href="[% uri_for(ni.path) | none %]">
+  <a class="nd2-rail-item[% ' active' IF nd2_nav == ni.tag %]" href="[% uri_for(ni.path) | none %]">
     <i class="fas [% ni.tag == 'inventory' ? 'fa-boxes-stacked' : 'fa-circle-dot' %]"></i><span>[% ni.label | html_entity %]</span></a>
   [% END %]
 
   [% IF settings._reports.size %]
   <div class="dropend nd2-rail-menu">
-    <a href="#" class="nd2-rail-item[% ' active' IF vars.nav == 'reports' %]" role="button"
+    <a href="#" class="nd2-rail-item[% ' active' IF nd2_nav == 'reports' %]" role="button"
       data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
       <i class="fas fa-chart-column"></i><span>Reports</span></a>
     <div class="dropdown-menu nd2-flyout">
@@ -84,7 +88,7 @@
 
   [% IF user_has_role('admin') %]
   <div class="dropend nd2-rail-menu">
-    <a href="#" class="nd2-rail-item[% ' active' IF vars.nav == 'admin' %]" role="button"
+    <a href="#" class="nd2-rail-item[% ' active' IF nd2_nav == 'admin' %]" role="button"
       data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
       <i class="fas fa-gear"></i><span>Admin</span></a>
     <div class="dropdown-menu nd2-flyout">
@@ -119,6 +123,8 @@
   </div>
   [% END %]
   <div class="nd2-rail-spacer"></div>
+  <button type="button" class="nd2-rail-item nd2-rail-btn" data-nd2-theme aria-label="Theme">
+    <i class="fas fa-circle-half-stroke" aria-hidden="true"></i><span>Theme</span></button>
 </nav>
 [% END %]
 
@@ -126,6 +132,13 @@
   [% IF NOT session.logged_in_user %]
   <a class="nd2-topbar-brand" href="[% uri_for('') | none %]">[% settings.branding_text | none %]</a>
   [% ELSE %]
+  [% IF nd2_crumbs.size %]
+  <nav class="nd2-crumbs" aria-label="Breadcrumb"><ol>
+    [% FOREACH c IN nd2_crumbs %]
+    <li[% ' aria-current="page"' IF loop.last %]>[% IF c.href AND NOT loop.last %]<a href="[% uri_for(c.href) | none %]">[% c.label | html_entity %]</a>[% ELSE %][% c.label | html_entity %][% END %]</li>
+    [% END %]
+  </ol></nav>
+  [% ELSE %]<div class="nd2-crumbs"></div>[% END %]
   <form class="nd2-search" method="get" action="[% uri_for('/search') | none %]" role="search">
     <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
     <input placeholder="Search devices, IP, MAC, VLAN, ports…" class="form-control"
@@ -213,6 +226,8 @@
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-deferred-nodes.js?v=[% asset_version | none %]"></script>
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-portcontrol.js?v=[% asset_version | none %]"></script>
 <script type="module" src="[% uri_base | none %]/modern/js/shell.js?v=[% asset_version | none %]"></script>
+[% IF session.logged_in_user %]<script type="module" src="[% uri_base | none %]/modern/js/theme.js?v=[% asset_version | none %]"></script>[% END %]
+[% IF page_devices %]<script type="module" src="[% uri_base | none %]/modern/js/devices.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF session.logged_in_user %]<script type="module" src="[% uri_base | none %]/modern/js/jobs.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF device %]<script type="module" src="[% uri_base | none %]/modern/js/device.js?v=[% asset_version | none %]"></script>
 <script type="module" src="[% uri_base | none %]/modern/js/ports.js?v=[% asset_version | none %]"></script>[% END %]

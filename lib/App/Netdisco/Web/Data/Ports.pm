@@ -10,7 +10,7 @@ use App::Netdisco::Web::Data qw/problem json_bool iso8601_sql speed_to_bps/;
 use base 'Exporter';
 our @EXPORT_OK = qw/
   device_ports device_port port_nodes
-  normalize_port normalize_node port_status ports_overview normalize_control
+  normalize_port normalize_node port_status ports_overview normalize_control normalize_last_node
 /;
 
 =head1 NAME
@@ -47,6 +47,25 @@ sub port_status {
 sub _str { my $v = shift; (defined $v and length $v) ? "$v" : undef }
 sub _int { my $v = shift; (defined $v and $v =~ m/^-?\d+$/) ? 0 + $v : undef }
 
+=head2 normalize_last_node( \%node )
+
+Pure: the node most recently seen on a port, for the table's column of what is
+connected. C<undef> in, C<undef> out.
+
+=cut
+
+sub normalize_last_node {
+  my $n = shift;
+  return undef unless $n and _str($n->{mac});
+  return {
+    mac          => _str($n->{mac}),
+    ip           => _str($n->{ip}),
+    dns          => _str($n->{dns}),
+    vendor       => _str($n->{vendor}),
+    last_seen_at => _str($n->{_iso_time_last}),
+  };
+}
+
 =head2 normalize_control( \%allowed, $has_poe )
 
 Pure: what the signed in user may change on one port, as the API shows it.
@@ -75,8 +94,9 @@ sub normalize_control {
 
 Pure: one port's columns (C<device_port>, plus what L</device_ports> joins in)
 to the API shape. C<%extra> carries what comes from other queries: C<vlans>,
-the port's VLAN numbers, C<node_count>, its active nodes, and C<control>, the
-port control decisions for the signed in user (see L</normalize_control>).
+the port's VLAN numbers, C<node_count>, its active nodes, C<last_node>, the
+most recently seen of them, and C<control>, the port control decisions for the
+signed in user (see L</normalize_control>).
 
 =cut
 
@@ -145,6 +165,7 @@ sub normalize_port {
     } : undef),
 
     node_count    => 0 + ($extra->{node_count} || 0),
+    last_node     => normalize_last_node($extra->{last_node}),
     control       => normalize_control($extra->{control}, $has_poe),
     tags          => [ @{ $c->{tags} || [] } ],
     custom_fields => (ref {} eq ref $custom ? $custom : {}),
@@ -196,6 +217,40 @@ sub _node_counts_by_port {
   return { map {( $_->get_column('port') => $_->get_column('node_count') )} $rs->all };
 }
 
+# The node most recently seen on each port, with its latest active address and
+# its vendor: what the table shows in its "connected nodes" column. One query
+# for the nodes, then one for the addresses of those, not one per port.
+sub _last_nodes_by_port {
+  my ($schema, $device) = @_;
+
+  my @rows = map {{ $_->get_columns }} $schema->resultset('Node')->search(
+    { 'me.switch' => $device->ip, 'me.active' => 1 },
+    {
+      join => 'manufacturer',
+      '+columns' => {
+        vendor => 'manufacturer.company',
+        _iso_time_last => \iso8601_sql('me.time_last'),
+      },
+      order_by => [ 'me.port', { -desc => 'me.time_last' }, 'me.mac' ],
+    })->all;
+
+  my %first;
+  foreach my $r (@rows) { $first{ $r->{port} } ||= $r }
+  return {} unless %first;
+
+  my %ip_of;
+  my $ips = $schema->resultset('NodeIp')->search(
+    { 'me.mac' => { -in => [ map { $_->{mac} } values %first ] }, 'me.active' => 1 },
+    { columns => [qw/mac ip dns time_last/], order_by => { -desc => 'me.time_last' } });
+  foreach my $i (map {{ $_->get_columns }} $ips->all) { $ip_of{ $i->{mac} } ||= $i }
+
+  foreach my $r (values %first) {
+    my $i = $ip_of{ $r->{mac} } or next;
+    @$r{qw/ip dns/} = @$i{qw/ip dns/};
+  }
+  return \%first;
+}
+
 =head2 device_ports( $schema, $device, %opts )
 
 Every port of C<$device>, in the order the classic tab sorts them, without the
@@ -220,10 +275,12 @@ sub device_ports {
 
   my $vlans  = _vlans_by_port($schema, $device);
   my $counts = _node_counts_by_port($schema, $device);
+  my $last   = _last_nodes_by_port($schema, $device);
 
   return [ map {
     normalize_port({ $_->get_columns }, {
       vlans => $vlans->{ $_->port }, node_count => $counts->{ $_->port },
+      last_node => $last->{ $_->port },
       control => ($opts{control} ? $opts{control}->($_) : undef),
     })
   } @rows ];
@@ -249,6 +306,7 @@ sub device_port {
   return normalize_port({ $row->get_columns }, {
     vlans => _vlans_by_port($schema, $device, $name)->{ $name },
     node_count => $count,
+    last_node => _last_nodes_by_port($schema, $device)->{ $name },
     control => ($opts{control} ? $opts{control}->($row) : undef),
   });
 }

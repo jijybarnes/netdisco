@@ -6,6 +6,7 @@
   data-nd2-src="[% uri_base | none %]/ajax/data/v2/devices/[% device_ip | uri %]/ports"
   data-nd2-api="[% uri_base | none %]/ajax/data/v2"
   data-nd2-device="[% device_ip | html_entity %]"
+  data-nd2-model="[% model | html_entity %]"
   data-nd2-reasons="[% reasons | html_entity %]"
   data-nd2-filter="[% port_filter | html_entity %]"
   data-nd2-columns="[% columns | html_entity %]">
@@ -15,6 +16,7 @@
       <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
       <input class="nd2-ports-search" type="search" autocomplete="off"
         placeholder="Filter by port, name, VLAN, MAC, neighbor…" aria-label="Filter ports">
+      <kbd class="nd2-kbd" aria-hidden="true">F</kbd>
     </label>
     <div class="nd2-chips" role="group" aria-label="Show only">
       [% FOREACH chip IN [ ['up', 'Up'], ['down', 'Down'], ['disabled', 'Disabled'], ['issues', 'Issues'],
@@ -62,5 +64,5 @@
   <div class="nd2-tablewrap">
     <table class="nd2-ports-table"><tbody><tr><td class="nd2-empty">Loading the ports…</td></tr></tbody></table>
   </div>
-  <div class="nd2-tablefoot" aria-live="polite"><span class="nd2-ports-count"></span></div>
+  <div class="nd2-tablefoot" aria-live="polite"><span class="nd2-ports-count"></span><span class="nd2-hint">Select a port for its details and controls</span></div>
 </div>

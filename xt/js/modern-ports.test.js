@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   isPhysical, faceplateLayout, vlanSlots, portLook, legendFor, CHIPS, matchesText,
   filterPorts, sortPorts, COLUMNS, usableColumns, visibleColumns, loadPrefs, savePrefs,
+  portLabel, DEFAULT_COLUMNS, setTabCount, COLUMN_ORDER, COLUMN_LABEL,
 } from '../../share/public/modern/js/ports.js';
 
 const port = (name, extra = {}) => ({
@@ -159,8 +160,8 @@ const offered = [
   { name: 'c_pvid', label: 'Native VLAN', default: true },
 ];
 
-test('columns: the site order and defaults, less what the tab cannot draw', () => {
-  assert.deepEqual(usableColumns(offered).map((c) => c.name), ['c_port', 'c_descr', 'c_name', 'c_pvid']);
+test('columns: the tab\'s order, less what the tab cannot draw', () => {
+  assert.deepEqual(usableColumns(offered).map((c) => c.name), ['c_port', 'c_name', 'c_descr', 'c_pvid']);
   assert.deepEqual(visibleColumns(offered, undefined).map((c) => c.name), ['c_port', 'c_name', 'c_pvid']);
   assert.deepEqual(visibleColumns(offered, { c_descr: true, c_name: false }).map((c) => c.name), ['c_port', 'c_descr', 'c_pvid']);
   assert.deepEqual(visibleColumns(offered, { c_port: false }).map((c) => c.name), ['c_port', 'c_name', 'c_pvid'], 'port cannot be hidden');
@@ -176,4 +177,112 @@ test('prefs: survive a round trip, and bad or missing storage is not an error', 
   const broken = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('full'); } };
   assert.deepEqual(loadPrefs(broken), {});
   savePrefs(broken, { mode: 'poe' });
+});
+
+// ---------- what the tab shows before anyone has chosen ----------
+
+const siteColumns = [
+  { name: 'c_admin', label: 'Port Control', default: false },
+  { name: 'c_port', label: 'Port', default: true },
+  { name: 'c_descr', label: 'Description', default: true },
+  { name: 'c_name', label: 'Name', default: false },
+  { name: 'c_up', label: 'Up/Down Status', default: false },
+  { name: 'c_speed', label: 'Speed (running)', default: false },
+  { name: 'c_pvid', label: 'Native VLAN', default: false },
+  { name: 'c_vmember', label: 'VLAN Membership', default: false },
+  { name: 'c_power', label: 'PoE', default: false },
+  { name: 'c_nodes', label: 'Connected Nodes', default: false },
+  { name: 'c_neighbors', label: 'Connected Devices', default: true },
+  { name: 'c_mtu', label: 'MTU', default: false },
+];
+
+test('visibleColumns: the tab opens on its own set, not the classic sidebar defaults', () => {
+  assert.deepEqual(visibleColumns(siteColumns, undefined).map((c) => c.name),
+    ['c_port', 'c_up', 'c_name', 'c_speed', 'c_pvid', 'c_vmember', 'c_power', 'c_nodes', 'c_neighbors'],
+    'with the status next to the port, and the speed, PoE and nodes the classic defaults leave out');
+  assert.equal(DEFAULT_COLUMNS.has('c_descr'), false, 'the site default of Description is not carried over');
+  assert.equal(DEFAULT_COLUMNS.has('c_mtu'), false);
+});
+
+test('visibleColumns: a browser\'s own choice still wins over the defaults', () => {
+  const names = (prefs) => visibleColumns(siteColumns, prefs).map((c) => c.name);
+  assert.ok(!names({ c_up: false }).includes('c_up'), 'a default can be turned off');
+  assert.ok(names({ c_mtu: true }).includes('c_mtu'), 'and another turned on');
+  assert.deepEqual(names({}), names(undefined), 'no choice made is no choice');
+});
+
+test('the Port cell draws the status beside the name only when no Status column says it', () => {
+  const p = port('Gi1/0/1', { status: 'errdisabled' });
+  assert.deepEqual(COLUMNS.c_port.cells(p, new Set(['c_port', 'c_up'])), [{ text: 'Gi1/0/1', cls: 'nd2-mono nd2-strong' }]);
+  assert.equal(COLUMNS.c_port.cells(p, new Set(['c_port']))[0].status, 'errdisabled');
+  assert.equal(COLUMNS.c_port.cells(p)[0].status, 'errdisabled', 'asked with no list of columns, it shows it');
+});
+
+test('the nodes cell names the node seen last, by address, and how many more', () => {
+  const lone = port('a', { node_count: 1, last_node: { mac: 'aa:bb:cc:dd:ee:01', ip: '10.0.0.5', vendor: 'Dell', dns: 'pc1' } });
+  assert.deepEqual(COLUMNS.c_nodes.cells(lone), [
+    { text: 'aa:bb:cc:dd:ee:01', cls: 'nd2-mono', title: 'Dell · pc1' },
+    { text: '10.0.0.5', cls: 'nd2-mono nd2-muted' },
+  ]);
+  const many = port('b', { node_count: 4, last_node: { mac: 'aa:bb:cc:dd:ee:02' } });
+  const parts = COLUMNS.c_nodes.cells(many);
+  assert.deepEqual(parts.map((x) => x.text), ['aa:bb:cc:dd:ee:02', '+3']);
+  assert.equal(parts[0].title, undefined, 'no vendor and no name, no tooltip');
+  assert.equal(parts[1].title, '4 nodes on this port');
+  assert.deepEqual(COLUMNS.c_nodes.cells(port('c', { node_count: 2 })), [{ text: '2 nodes' }], 'a count with no node to name');
+  assert.deepEqual(COLUMNS.c_nodes.cells(port('d')), [{ text: '—', cls: 'nd2-muted' }]);
+});
+
+test('portLabel: the number, and a letter for a port that stands alone', () => {
+  assert.equal(portLabel('Gi1/0/', 7, 48), '7');
+  assert.equal(portLabel('Ethernet', 3, 3), '3');
+  assert.equal(portLabel('Management', 0, 1), 'M0');
+  assert.equal(portLabel('mgmt', 0, 1), 'M0');
+  assert.equal(portLabel('1/1/', 4, 1), '4', 'nothing to abbreviate');
+});
+
+test('faceplateLayout: a group knows its size, for the label of a lone port', () => {
+  const units = faceplateLayout([port('Ethernet1'), port('Ethernet2'), port('Management0')]);
+  assert.deepEqual(units.map((u) => [u.key, u.size]), [['Ethernet', 2], ['Management', 1]]);
+});
+
+test('setTabCount: the tab says how many ports it shows', () => {
+  const made = [];
+  const link = {
+    badge: null,
+    querySelector() { return this.badge; },
+    appendChild(b) { this.badge = b; made.push(b); },
+  };
+  const doc = { getElementById: (id) => (id === 'ports_link' ? link : null), createElement: () => ({ className: '', textContent: '', remove() { link.badge = null; } }) };
+  setTabCount(doc, 5);
+  assert.equal(link.badge.textContent, '5');
+  assert.equal(link.badge.className, 'nd2-n');
+  setTabCount(doc, 4);
+  assert.equal(link.badge.textContent, '4');
+  assert.equal(made.length, 1, 'the badge is updated, not added again');
+  setTabCount(doc, 0);
+  assert.equal(link.badge, null, 'no ports, no count');
+  setTabCount({ getElementById: () => null }, 3); // a page without the tab is not an error
+});
+
+test('usableColumns: the state sits beside the port whatever order the site lists it in', () => {
+  // the shipped classic order puts Up/Down Status last
+  const order = usableColumns(siteColumns).map((c) => c.name);
+  assert.equal(order[0], 'c_port');
+  assert.equal(order[1], 'c_up');
+  assert.ok(order.indexOf('c_speed') < order.indexOf('c_pvid'));
+  assert.ok(order.indexOf('c_nodes') < order.indexOf('c_neighbors'));
+  assert.deepEqual(COLUMN_ORDER.filter((n) => !COLUMNS[n]), [], 'every name in the order is a column the tab can draw');
+});
+
+test('usableColumns: the tab\'s headings, and the site\'s for what the tab does not name', () => {
+  const byName = Object.fromEntries(usableColumns(siteColumns).map((c) => [c.name, c.label]));
+  assert.equal(byName.c_up, 'Status');
+  assert.equal(byName.c_speed, 'Speed');
+  assert.equal(byName.c_vmember, 'VLAN membership');
+  assert.equal(byName.c_mtu, 'MTU', 'the site\'s label for a column the tab has no heading for');
+  assert.deepEqual(Object.keys(COLUMN_LABEL).filter((n) => !COLUMNS[n]), [], 'headings only for columns that exist');
+  // unknown columns follow the named ones, in the site's order
+  const extra = usableColumns([{ name: 'c_ifindex', label: 'IF' }, { name: 'c_mtu', label: 'MTU' }, { name: 'c_port', label: 'Port' }]);
+  assert.deepEqual(extra.map((c) => c.name), ['c_port', 'c_ifindex', 'c_mtu']);
 });
