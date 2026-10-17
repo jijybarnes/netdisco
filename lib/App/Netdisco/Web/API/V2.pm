@@ -12,6 +12,7 @@ use App::Netdisco::Web::Data::Ports qw/device_ports device_port port_nodes
                                        device_vlans port_log free_interval/;
 use App::Netdisco::Web::Data::Jobs 'my_jobs';
 use App::Netdisco::Web::Data::Devices 'list_devices';
+use App::Netdisco::Web::Data::Search 'quick_search';
 use App::Netdisco::Util::Port qw/port_acl_service port_acl_pvid port_acl_name
                                  device_acl_by_role_check sync_portctl_roles/;
 use App::Netdisco::Util::Permission qw/acl_matches acl_matches_only/;
@@ -119,6 +120,22 @@ register_data_route(
       map { $_ => scalar param($_) } qw/q health sort dir limit offset/);
     return { data => $r->{rows}, meta => {
       count => scalar @{ $r->{rows} }, total => $r->{total}, failing => $r->{failing} } };
+  },
+);
+
+register_data_route(
+  pattern  => '/search',
+  doc_path => '/search',
+  doc => {
+    description => 'The first few devices, nodes, port descriptions and VLANs that match some text: a MAC, an address, a VLAN number or words',
+    parameters  => [
+      q => { description => 'What to look for', in => 'query', type => 'string', required => 1 },
+    ],
+    responses => { default => {} },
+  },
+  code => sub {
+    my $q = param('q');
+    return { data => quick_search(_schema, $q), meta => { q => (defined $q ? "$q" : '') } };
   },
 );
 

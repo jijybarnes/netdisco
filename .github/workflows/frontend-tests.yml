@@ -168,6 +168,20 @@ jobs:
       - name: The list's address, order and cells
         run: node --test xt/js/modern-devices.test.js
 
+  modern-palette:
+    name: modern command palette
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # Same naming rule as the jobs above: name the file, never a glob.
+      - name: What the palette lists, and where each choice goes
+        run: node --test xt/js/modern-palette.test.js
+
   modern-theme:
     name: modern theme choice
     runs-on: ubuntu-latest
