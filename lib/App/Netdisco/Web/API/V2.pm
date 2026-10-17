@@ -8,11 +8,13 @@ use URI::Escape 'uri_unescape';
 
 use App::Netdisco::Web::Data qw/register_data_route/;
 use App::Netdisco::Web::Data::Device qw/find_device device_summary/;
-use App::Netdisco::Web::Data::Ports qw/device_ports device_port port_nodes/;
+use App::Netdisco::Web::Data::Ports qw/device_ports device_port port_nodes
+                                       device_vlans port_log free_interval/;
 use App::Netdisco::Web::Data::Jobs 'my_jobs';
 use App::Netdisco::Web::Data::Devices 'list_devices';
 use App::Netdisco::Util::Port qw/port_acl_service port_acl_pvid port_acl_name
                                  device_acl_by_role_check sync_portctl_roles/;
+use App::Netdisco::Util::Permission qw/acl_matches acl_matches_only/;
 
 # Each route here is served as /api/v2/... and as /ajax/data/v2/..., see
 # App::Netdisco::Web::Data. Port names hold slashes (Gi1/0/1), so a port is the
@@ -43,17 +45,37 @@ sub _control_for {
   # the route refuses before it looks at the port
   my $device_ok = (user_has_role('admin') or device_acl_by_role_check($device->ip, $user));
 
+  my $shown = _custom_fields_for();
+  my @editable = map { $_->{name} } grep { $_->{editable} } _port_custom_fields();
   return sub {
     my $row = shift;
     return { service => 0, pvid => 0, name => 0 } unless $device_ok;
     my $service = port_acl_service($row, $device, $user) ? 1 : 0;
+    my %here = map {( $_ => 1 )} @{ $shown->($row) };
     return {
       service => $service,
       pvid    => (port_acl_pvid($row, $device, $user) ? 1 : 0),
       name    => ($service or port_acl_name($row, $device, $user) ? 1 : 0),
+      custom_fields => [ grep { $here{$_} } @editable ],
     };
   };
 }
+
+sub _port_custom_fields { grep { $_->{name} } @{ setting('custom_fields')->{'device_port'} || [] } }
+
+# The custom fields a port may show: the site's, less those whose only and no
+# ACLs leave this port out, as permitted_by_acl decides for the classic tab.
+sub _custom_fields_for {
+  my @fields = _port_custom_fields();
+  return sub {
+    my $row = shift;
+    return [ map { $_->{name} } grep {
+      not acl_matches($row, ($_->{no} || [])) and acl_matches_only($row, ($_->{only} || []))
+    } @fields ];
+  };
+}
+
+sub _free { [ free_interval(scalar param('free_age'), scalar param('free_unit')) ] }
 
 sub _flag {
   my $v = param(shift);
@@ -69,6 +91,12 @@ my %PORT = (
   description => 'Name of the port, as listed by .../ports. It may contain slashes; URL-encode any other reserved character.',
   required => 1,
   in => 'path',
+);
+
+# is_free: down, and for how long, as the classic tab's "Mark as Free if Down for"
+my %FREE = (
+  free_age  => { description => 'With free_unit: how long a port must have been down to be free (is_free), 1 to 31', in => 'query', type => 'integer', default => 3 },
+  free_unit => { description => 'days, weeks, months or years', in => 'query', type => 'string', enum => [qw/days weeks months years/], default => 'months' },
 );
 
 register_data_route(
@@ -111,6 +139,43 @@ register_data_route(
 );
 
 register_data_route(
+  pattern  => '/devices/(?<ip>[^/]+)/vlans',
+  doc_path => '/devices/{ip}/vlans',
+  doc => {
+    description => 'The VLANs a device knows, by number, with their names',
+    parameters  => [ ip => \%IP ],
+    responses => { default => {} },
+  },
+  code => sub {
+    my $c = shift;
+    my $device = find_device(_schema, uri_unescape($c->{ip}));
+    my $vlans = device_vlans(_schema, $device);
+    return { data => $vlans, meta => { device => $device->ip, count => scalar @$vlans } };
+  },
+);
+
+register_data_route(
+  pattern  => '/devices/(?<ip>[^/]+)/ports/(?<port>.+)/log',
+  doc_path => '/devices/{ip}/ports/{port}/log',
+  doc => {
+    description => 'The port control log of a port, newest first: changes, who made them and why, and comments',
+    parameters  => [
+      ip => \%IP, port => \%PORT,
+      limit => { description => 'How many entries, at most 200', in => 'query', type => 'integer', default => 25 },
+    ],
+    responses => { default => {} },
+  },
+  code => sub {
+    my $c = shift;
+    my $device = find_device(_schema, uri_unescape($c->{ip}));
+    my $port = _port_name($c->{port});
+    my $log = port_log(_schema, $device, $port,
+      limit => scalar param('limit'), reasons => setting('port_control_reasons'));
+    return { data => $log, meta => { device => $device->ip, port => $port, count => scalar @$log } };
+  },
+);
+
+register_data_route(
   pattern  => '/devices/(?<ip>[^/]+)/ports/(?<port>.+)/nodes',
   doc_path => '/devices/{ip}/ports/{port}/nodes',
   doc => {
@@ -139,14 +204,14 @@ register_data_route(
   doc_path => '/devices/{ip}/ports/{port}',
   doc => {
     description => 'One port of a device',
-    parameters  => [ ip => \%IP, port => \%PORT ],
+    parameters  => [ ip => \%IP, port => \%PORT, %FREE ],
     responses => { default => {} },
   },
   code => sub {
     my $c = shift;
     my $device = find_device(_schema, uri_unescape($c->{ip}));
     my $port = device_port(_schema, $device, _port_name($c->{port}),
-      control => _control_for($device));
+      control => _control_for($device), custom_fields => _custom_fields_for(), free => _free());
     return { data => $port, meta => { device => $device->ip } };
   },
 );
@@ -162,6 +227,7 @@ register_data_route(
         description => 'Include the ports the hide_deviceports setting hides',
         in => 'query', type => 'boolean', default => 'false',
       },
+      %FREE,
     ],
     responses => { default => {} },
   },
@@ -169,7 +235,7 @@ register_data_route(
     my $c = shift;
     my $device = find_device(_schema, uri_unescape($c->{ip}));
     my $ports = device_ports(_schema, $device, include_hidden => _flag('include_hidden'),
-      control => _control_for($device));
+      control => _control_for($device), custom_fields => _custom_fields_for(), free => _free());
     return { data => $ports, meta => { device => $device->ip, count => scalar @$ports } };
   },
 );

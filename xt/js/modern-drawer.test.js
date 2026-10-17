@@ -6,8 +6,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  portFacts, portUrl, controlsAvailable, validVlan, buildChanges, BOUNCE, formBody,
-  submitChanges, pendingForPort,
+  portTiles, portDetails, portUrl, controlsAvailable, validVlan, buildChanges, BOUNCE, formBody,
+  submitChanges, pendingForPort, formatMac, vlanOptions, OTHER_VLAN, commentBody, validComment, logEntryText,
+  poeText,
 } from '../../share/public/modern/js/drawer.js';
 
 const port = (extra = {}) => ({
@@ -20,12 +21,60 @@ const form = (over = {}) => ({ enabled: true, poe: undefined, name: 'printer', v
 
 // ---------- what is shown ----------
 
-test('portFacts: what is known, in a fixed order; what is not is left out', () => {
-  assert.deepEqual(portFacts(port()).map(([k]) => k), ['Speed', 'Duplex', 'Native VLAN', 'VLANs', 'MTU']);
-  assert.equal(portFacts(port({ speed_admin: '100' })).find(([k]) => k === 'Speed')[1], '1.0 Gbps (set 100)');
-  assert.equal(portFacts(poePort(true)).find(([k]) => k === 'PoE')[1], '6.4 W');
-  assert.equal(portFacts(poePort(false)).find(([k]) => k === 'PoE')[1], 'Off');
-  assert.deepEqual(portFacts({ port: 'x', vlans: [] }), []);
+test('portTiles: always the six of the design, in their places; what is not known is a dash', () => {
+  const labels = ['Speed', 'Duplex', 'Native VLAN', 'PoE', 'STP', 'Last change'];
+  assert.deepEqual(portTiles(port()).map((t) => t.label), labels);
+  assert.deepEqual(portTiles({ port: 'x' }).map((t) => t.value), ['—', '—', '—', '—', '—', '—']);
+  const t = (p, l, vlans) => portTiles(p, vlans).find((x) => x.label === l);
+  assert.equal(t(port({ speed_admin: '100' }), 'Speed').sub, 'set to 100');
+  assert.equal(t(port(), 'Speed').sub, null, 'auto is not worth saying');
+  assert.equal(t(poePort(true), 'PoE').value, '6.4 W');
+  assert.equal(t(poePort(false), 'PoE').value, 'Off');
+  assert.equal(t(port(), 'Native VLAN', [{ vlan: 30, name: 'printers' }]).sub, 'printers', 'the VLAN by its name too');
+  assert.equal(t(port({ duplex: 'half' }), 'Duplex').warn, true, 'half duplex on a linked port is flagged');
+  assert.equal(t(port({ duplex: 'half', status: 'down' }), 'Duplex').warn, false);
+  assert.equal(t(port({ stp_state: 'blocking' }), 'STP').warn, true);
+  assert.equal(t(port({ last_change_at: '2026-10-01T00:00:00Z' }), 'Last change').time, true);
+});
+
+test('poeText: watts drawn, else whether it is on', () => {
+  assert.equal(poeText(null), null);
+  assert.equal(poeText({ power_mw: 26800 }), '26.8 W');
+  assert.equal(poeText({ admin_enabled: true, power_mw: 0 }), 'On, not powering');
+});
+
+test('portDetails: the rest of what is known, the custom fields by their labels', () => {
+  const d = portDetails(port({ descr: 'GigabitEthernet1/0/7', type: 'ethernetCsmacd', mac: '00:1a:2b:3c:4d:5e', vlans: [30, 40],
+    ssids: ['corp'], custom_fields: { room: '2.14' }, tags: ['printer'] }),
+  { vlans: [{ vlan: 40, name: 'CCTV' }], fields: [{ name: 'room', label: 'Room' }, { name: 'rack', label: 'Rack' }], macFormat: 'Cisco' });
+  assert.deepEqual(Object.fromEntries(d), {
+    'VLAN membership': '30, 40 CCTV', Interface: 'GigabitEthernet1/0/7', Type: 'ethernetCsmacd', MAC: '001a.2b3c.4d5e',
+    MTU: '1500', SSID: 'corp', Tags: 'printer', Room: '2.14',
+  });
+  assert.deepEqual(portDetails({ port: 'Gi1', descr: 'Gi1' }), [], 'the interface name is not said twice');
+});
+
+test('formatMac: the four ways the classic tab writes a MAC', () => {
+  const m = '00:1a:2b:0c:4d:5e';
+  assert.equal(formatMac(m), m);
+  assert.equal(formatMac(m, 'IEEE'), m);
+  assert.equal(formatMac(m, 'Cisco'), '001a.2b0c.4d5e');
+  assert.equal(formatMac(m, 'Microsoft'), '00-1a-2b-0c-4d-5e');
+  assert.equal(formatMac(m, 'Sun'), '0-1a-2b-c-4d-5e');
+  assert.equal(formatMac('AA:BB:CC:DD:EE:FF', 'Cisco'), 'aabb.ccdd.eeff');
+  assert.equal(formatMac('not a mac', 'Cisco'), 'not a mac', 'anything else is left as it is');
+  assert.equal(formatMac(null), '');
+});
+
+test('vlanOptions: the device VLANs by number and name, the port VLAN always among them, then Other', () => {
+  const vlans = [{ vlan: 40, name: 'CCTV' }, { vlan: 1, name: 'default' }, { vlan: 20, name: null }];
+  assert.deepEqual(vlanOptions(vlans, 40), [
+    { value: '1', label: '1 — default' }, { value: '20', label: '20' }, { value: '40', label: '40 — CCTV' },
+    { value: OTHER_VLAN, label: 'Other…' }]);
+  assert.deepEqual(vlanOptions(vlans, 99).map((o) => o.value), ['1', '20', '40', '99', OTHER_VLAN],
+    'a VLAN the device does not list is still the one selected');
+  assert.deepEqual(vlanOptions([], null), [{ value: OTHER_VLAN, label: 'Other…' }]);
+  assert.deepEqual(vlanOptions([{ vlan: 0 }, { vlan: 5000 }], null).length, 1, 'no VLAN that cannot be set');
 });
 
 test('portUrl: a port name keeps its slashes and escapes everything else', () => {
@@ -36,13 +85,14 @@ test('portUrl: a port name keeps its slashes and escapes everything else', () =>
 // ---------- what may be changed ----------
 
 test('controlsAvailable: only what the API says; no control object, nothing', () => {
-  assert.deepEqual(controlsAvailable(port()), { admin: true, poe: true, vlan: true, name: true, any: true });
+  assert.deepEqual(controlsAvailable(port()), { admin: true, poe: true, vlan: true, name: true, custom: [], any: true });
   assert.equal(controlsAvailable(port({ control: null })).any, false);
   assert.equal(controlsAvailable({}).any, false);
   const none = controlsAvailable(port({ control: { admin_status: false, poe: false, native_vlan: false, name: false } }));
   assert.equal(none.any, false, 'a user with port control who may change nothing here');
   assert.deepEqual(controlsAvailable(port({ control: { admin_status: false, poe: false, native_vlan: false, name: true } })),
-    { admin: false, poe: false, vlan: false, name: true, any: true });
+    { admin: false, poe: false, vlan: false, name: true, custom: [], any: true });
+  assert.equal(controlsAvailable(port({ control: { custom_fields: ['room'] } })).any, true, 'a custom field alone is something');
 });
 
 test('validVlan: 1 to 4094, digits only', () => {
@@ -103,6 +153,21 @@ test('buildChanges: PoE needs a PoE port as well as the right to switch it', () 
   assert.deepEqual(buildChanges(port(), form({ poe: true })), { changes: [], errors: {} });
 });
 
+test('buildChanges: a control the form does not have is left alone', () => {
+  assert.deepEqual(buildChanges(port(), { name: 'x' }).changes, [{ field: 'c_name', action: '', value: 'x' }],
+    'no switch on the form is not a request to disable the port');
+});
+
+test('buildChanges: a custom field the user may edit, sent as the classic tab sends it', () => {
+  const p = port({ custom_fields: { room: '2.14' }, control: { name: true, custom_fields: ['room'] } });
+  assert.deepEqual(buildChanges(p, form({ custom: { room: '2.15' } })).changes,
+    [{ field: 'cf_room', action: '', value: '2.15' }]);
+  assert.deepEqual(buildChanges(p, form({ custom: { room: '2.14' } })).changes, [], 'unchanged');
+  assert.deepEqual(buildChanges(p, form({ custom: { rack: 'A1' } })).changes, [], 'not one the API offered');
+  assert.deepEqual(buildChanges(port({ control: { custom_fields: ['rack'] } }), { custom: { rack: '' } }).changes, [],
+    'empty and missing are the same');
+});
+
 // ---------- the request ----------
 
 test('formBody: every field the route reads, every one a string', () => {
@@ -148,6 +213,20 @@ test('submitChanges: a request that never reached the server is reported as that
     (e) => e.accepted === 0 && e.status === 0 && /could not be sent/.test(e.message));
   await assert.rejects(submitChanges(async () => { throw new Error('offline'); }, '', 'd', 'p', [{ field: 'a' }], {}),
     /offline/);
+});
+
+test('commentBody and validComment: what the classic port log route reads, printable and not empty', () => {
+  assert.deepEqual(Object.fromEntries(commentBody('10.0.0.1', 'Gi1/0/7', 'patched')), { ip: '10.0.0.1', port: 'Gi1/0/7', log: 'patched' });
+  assert.equal(validComment('  moved to 2.14 '), 'moved to 2.14');
+  for (const bad of ['', '   ', null, undefined, 'tab\there']) assert.equal(validComment(bad), null, JSON.stringify(bad));
+});
+
+test('logEntryText: a change and its reason, a comment as its text', () => {
+  assert.deepEqual(logEntryText({ action: 'port down', reason: 'abuse', reason_label: 'Abuse', log: 'loop' }),
+    { what: 'port down — Abuse', note: 'loop' });
+  assert.deepEqual(logEntryText({ action: 'vlan 40', reason: 'other', log: null }), { what: 'vlan 40', note: null },
+    '"other" is no reason worth saying');
+  assert.deepEqual(logEntryText({ action: 'comment', log: 'patched to 2.14' }), { what: 'patched to 2.14', note: null });
 });
 
 test('pendingForPort: only this port on this device, only while it is not finished', () => {

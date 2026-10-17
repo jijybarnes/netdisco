@@ -51,6 +51,8 @@
 }
 
 [data-nd-ui="modern"][data-bs-theme="dark"] {
+  /* said outright: some platforms draw light scrollbars whatever color-scheme says */
+  scrollbar-color: #3a404b transparent;
   --nd2-bg: #0f1115;
   --nd2-surface: #171a20;
   --nd2-surface-2: #1d2128;
@@ -1397,10 +1399,20 @@ th:not(:has(.nd2-th)) {
   padding: 6px 16px 28px;
 }
 
+.nd2-dr-sub { margin-top: 4px; }
+
 .nd2-dr-sec { margin: 14px 0 18px; }
 
-.nd2-dr-sec > h4 {
+.nd2-dr-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 8px;
+}
+
+.nd2-dr-sec-head h4 {
+  margin: 0;
   line-height: 1.4;
   font-size: 11.5px;
   font-weight: 600;
@@ -1408,6 +1420,27 @@ th:not(:has(.nd2-th)) {
   text-transform: uppercase;
   color: var(--nd2-muted);
 }
+
+.nd2-dr-opt, .nd2-dr-more { font-size: 12.5px; color: var(--nd2-muted); }
+.nd2-dr-opt { display: inline-flex; align-items: center; gap: 4px; margin: 0; cursor: pointer; }
+
+/* the six tiles at the top, as the design has them */
+.nd2-kv {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.nd2-kv > div {
+  background: var(--nd2-surface-2);
+  border-radius: 7px;
+  padding: 7px 9px;
+  overflow-wrap: anywhere;
+}
+
+.nd2-kv small { display: block; color: var(--nd2-muted); font-size: 11px; }
+.nd2-kv-sub { display: block; color: var(--nd2-muted); font-size: 11.5px; }
+.nd2-kv-warn { box-shadow: inset 3px 0 0 var(--nd2-warning); }
 
 .nd2-dr-facts {
   display: grid;
@@ -1427,30 +1460,74 @@ th:not(:has(.nd2-th)) {
   background: var(--nd2-accent-soft);
 }
 
-.nd2-dr-form { display: grid; gap: 10px; }
-
-.nd2-dr-field > label {
+/* label on the left, control on the right */
+.nd2-form-row {
   display: grid;
-  gap: 4px;
-  margin: 0;
-  font-weight: 500;
-}
-
-.nd2-dr-switch {
-  padding-left: 0;
-}
-
-.nd2-dr-switch > label {
-  display: flex;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
-  gap: 10px;
+  margin-bottom: 8px;
 }
 
-.nd2-dr-switch .form-check-input {
-  float: none;
-  margin: 0;
-  flex: none;
+.nd2-form-row > label { margin: 0; }
+
+/* the classic stylesheet spaces its form fields apart, which a row does itself;
+   the design's fields are a little larger than the table's */
+.nd2-drawer :is(.form-control, .form-select) { margin: 0; padding: 6px 8px; font-size: 14px; }
+.nd2-drawer .form-select { padding-right: 28px; }
+.nd2-drawer .btn { padding: 6px 12px; font-size: 14px; font-weight: 500; border-radius: 7px; }
+.nd2-drawer .btn-outline-secondary {
+  --bs-btn-color: var(--nd2-text);
+  --bs-btn-bg: var(--nd2-surface);
+  --bs-btn-border-color: var(--nd2-border-strong);
+  --bs-btn-hover-color: var(--nd2-text);
+  --bs-btn-hover-bg: var(--nd2-surface-2);
+  --bs-btn-hover-border-color: var(--nd2-border-strong);
+  --bs-btn-active-color: var(--nd2-text);
+  --bs-btn-active-bg: var(--nd2-surface-2);
+  --bs-btn-active-border-color: var(--nd2-border-strong);
 }
+.nd2-dr-why { border-top: 1px dashed var(--nd2-border); padding-top: 8px; }
+
+.nd2-dr-vlan { display: flex; gap: 6px; }
+.nd2-dr-vlan > select { flex: 1 1 auto; min-width: 0; }
+.nd2-dr-vlan-other { flex: 0 0 9em; }
+
+/* an on/off switch, as the design draws it */
+.nd2-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.nd2-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+
+.nd2-switch span {
+  position: absolute;
+  inset: 0;
+  background: var(--nd2-border-strong);
+  border-radius: 20px;
+  transition: background-color .15s;
+}
+
+.nd2-switch span::before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  top: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .15s;
+}
+
+.nd2-switch input:checked + span { background: var(--nd2-good); }
+.nd2-switch input:checked + span::before { transform: translateX(16px); }
+.nd2-switch input:focus-visible + span { outline: 2px solid var(--nd2-accent); outline-offset: 2px; }
 
 .nd2-dr-error {
   margin-top: 4px;
@@ -1462,15 +1539,7 @@ th:not(:has(.nd2-th)) {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.nd2-dr-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--nd2-border);
-  border-radius: 8px;
+  margin-top: 10px;
 }
 
 .nd2-clip {
@@ -1481,16 +1550,34 @@ th:not(:has(.nd2-th)) {
 }
 
 .nd2-node {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
   padding: 8px 10px;
   margin-bottom: 6px;
   border: 1px solid var(--nd2-border);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
-.nd2-node-ips { text-align: right; }
+.nd2-node a { color: inherit; text-decoration: none; }
+.nd2-node a:hover { color: var(--nd2-accent); text-decoration: underline; }
+.nd2-node .nd2-pill { margin-left: 6px; }
+.nd2-node-old { border-style: dashed; }
+.nd2-node-r { text-align: right; color: var(--nd2-muted); font-size: 12px; }
+.nd2-node-r .nd2-mono { color: var(--nd2-text-2, var(--nd2-text)); font-size: 12.5px; }
+
+.nd2-dr-log { list-style: none; margin: 0 0 10px; padding: 0; }
+.nd2-dr-log li { padding: 6px 0; border-bottom: 1px solid var(--nd2-border); }
+.nd2-dr-log li:last-child { border-bottom: 0; }
+.nd2-dr-log-meta { font-size: 12px; }
+.nd2-dr-comment { display: flex; gap: 6px; }
+
+/* the View menu of the Ports tab */
+.nd2-viewmenu { min-width: 270px; }
+.nd2-viewmenu-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 12px; }
+.nd2-viewmenu-row > label { margin: 0; white-space: nowrap; }
+.nd2-viewmenu-row select { width: auto; }
+.nd2-viewmenu-pair { display: inline-flex; gap: 4px; }
 
 /* the row of the open port, in the table and on the panel */
 .nd2-ports-table tbody tr.nd2-sel { cursor: pointer; }
@@ -1510,6 +1597,8 @@ th:not(:has(.nd2-th)) {
   }
 
   .nd2-dr-body { padding-bottom: 24px; }
+  .nd2-kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nd2-form-row { grid-template-columns: 1fr; gap: 4px; }
 }
 
 /* ---------- jobs list ---------- */

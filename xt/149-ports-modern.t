@@ -9,7 +9,7 @@ use Template::AutoFilter;
 use File::Spec::Functions qw/catfile updir/;
 use FindBin;
 
-use App::Netdisco::Web::PortsModern 'port_column_offer';
+use App::Netdisco::Web::PortsModern qw/port_column_offer port_view_defaults short_device_name/;
 
 # The modern Ports tab: the classic route hands over to it, it renders a shell
 # that ports.js fills from API v2, and it writes the CSV download itself.
@@ -27,6 +27,29 @@ is_deeply [ map { $_->{name} } @$offer ], [qw/c_admin c_port c_xt_plugin/],
 is $offer->[2]{label}, 'c_xt_plugin', 'portColumnOffer__no_label__falls_back_to_the_name';
 is(JSON::PP->new->canonical->encode([ map { $_->{default} } @$offer ]), '[false,true,true]',
   'portColumnOffer__defaults__json_booleans_from_the_checked_convention');
+ok !grep({ exists $_->{custom} } @$offer), 'portColumnOffer__ordinary_columns__not_marked_custom';
+
+my $cf = port_column_offer([
+  { name => 'room', label => 'Room', field => 'cf_room', editable => 1, position => 'right' },
+  { name => 'asset', label => 'Asset', field => 'cf_asset' },
+]);
+is(JSON::PP->new->canonical->encode([ map {[ $_->{custom}, $_->{editable} ]} @$cf ]), '[[true,true],[true,false]]',
+  'portColumnOffer__custom_field__marked_and_whether_it_may_be_edited');
+
+# ---- the View menu's defaults ----
+
+is(JSON::PP->new->canonical->encode(port_view_defaults({
+  p_fold_subinterfaces => { default => undef }, p_vlan_names => { default => 'checked' }, p_hide1002 => { default => undef },
+  mac_format => { default => 'Cisco' }, age_num => { default => 2 }, age_unit => { default => 'weeks' },
+})), '{"foldSubinterfaces":false,"freeAge":2,"freeUnit":"weeks","hide1002":false,"macFormat":"Cisco","vlanNames":true}',
+  'portViewDefaults__sidebar_defaults__under_the_names_the_tab_keeps');
+is(JSON::PP->new->canonical->encode(port_view_defaults(undef)),
+  '{"foldSubinterfaces":false,"freeAge":3,"freeUnit":"months","hide1002":false,"macFormat":"IEEE","vlanNames":false}',
+  'portViewDefaults__nothing_configured__the_classic_defaults');
+
+is short_device_name('sw-bat-a-01.corp.lan'), 'sw-bat-a-01', 'shortDeviceName__host_name__without_the_domain';
+is short_device_name('172.20.20.12'), '172.20.20.12', 'shortDeviceName__ipv4__whole';
+is short_device_name('fe80::1'), 'fe80::1', 'shortDeviceName__ipv6__whole';
 
 # ---- the shell, the sidebar, the CSV ----
 
@@ -45,6 +68,8 @@ my $shell = '';
 $tt->process('ajax/device/ports.tt', {
   uri_base    => '/nd',
   device_ip   => 'fe80::1',
+  device_name => 'sw <1>',
+  view_defaults => '{"macFormat":"<b>"}',
   model       => 'C9300-48P <x>',
   port_filter => '"><script>alert(1)</script>',
   columns     => JSON::PP->new->canonical->encode([ { name => 'c_port', label => 'Port <b>', default => JSON::PP::true } ]),
@@ -57,7 +82,13 @@ like $shell, qr{data-nd2-filter="&quot;&gt;&lt;script&gt;alert\(1\)&lt;/script&g
   'portsShell__filter__escaped_into_its_attribute';
 like $shell, qr{data-nd2-columns="\[\{&quot;default&quot;:true,&quot;label&quot;:&quot;Port &lt;b&gt;&quot;},
   'portsShell__columns__json_escaped_into_its_attribute';
-is scalar(() = $shell =~ /data-chip="/g), 7, 'portsShell__chips__all_seven';
+is scalar(() = $shell =~ /data-chip="/g), 8, 'portsShell__chips__all_eight';
+like $shell, qr{data-chip="free"}, 'portsShell__chips__free_ports_among_them';
+like $shell, qr{data-nd2-device-name="sw &lt;1&gt;"}, 'portsShell__device_name__escaped_for_the_drawer';
+like $shell, qr{data-nd2-view="\{&quot;macFormat&quot;:&quot;&lt;b&gt;&quot;\}"}, 'portsShell__view_defaults__escaped_into_their_attribute';
+is scalar(() = $shell =~ /data-nd2-view="(?:foldSubinterfaces|vlanNames|hide1002|macFormat|freeAge|freeUnit)"/g), 6,
+  'portsShell__view_menu__every_classic_display_option';
+like $shell, qr{class="nd2-ports-hidden"}, 'portsShell__view_menu__hidden_ports_too';
 like $shell, qr{data-nd2-model="C9300-48P &lt;x&gt;"}, 'portsShell__model__escaped_for_the_panel_label';
 like $shell, qr{data-nd2-api="/nd/ajax/data/v2"}, 'portsShell__api_base__under_the_site_base_for_the_drawers_nodes';
 like $shell, qr{data-nd2-device="fe80::1"}, 'portsShell__device__for_the_drawers_requests';

@@ -323,7 +323,7 @@
 
 /* ---------- forms ---------- */
 
-:root[data-nd-ui="modern"] .nd2-main :is(.form-control, .form-select) {
+:root[data-nd-ui="modern"] :is(.nd2-main, .nd2-drawer) :is(.form-control, .form-select) {
   border: 1px solid var(--nd2-border-strong);
   border-radius: 7px;
   background-color: var(--nd2-surface);
@@ -332,13 +332,13 @@
   box-shadow: none;
 }
 
-:root[data-nd-ui="modern"] .nd2-main :is(.form-control, .form-select):focus {
+:root[data-nd-ui="modern"] :is(.nd2-main, .nd2-drawer) :is(.form-control, .form-select):focus {
   border-color: var(--nd2-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--nd2-accent) 25%, transparent);
   outline: 0;
 }
 
-:root[data-nd-ui="modern"] .nd2-main :is(.form-control, .form-select)::placeholder {
+:root[data-nd-ui="modern"] :is(.nd2-main, .nd2-drawer) :is(.form-control, .form-select)::placeholder {
   color: var(--nd2-muted);
 }
 
