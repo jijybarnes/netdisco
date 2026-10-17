@@ -150,7 +150,7 @@
       data-nd-typeahead-min="3" data-nd-typeahead-first
       data-nd-typeahead-menu="nd_search-suggestions nd_navbar-suggestions"/>
     <input name="firstsearch" type="hidden" value="on">
-    <kbd class="nd2-kbd" aria-hidden="true">/</kbd>
+    <kbd class="nd2-kbd" aria-hidden="true" title="Or Ctrl+K">/</kbd>
   </form>
 
   [% IF settings.tenant_databases.size %]
@@ -227,7 +227,17 @@
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-netmap.js?v=[% asset_version | none %]"></script>
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-deferred-nodes.js?v=[% asset_version | none %]"></script>
 <script type="text/javascript" src="[% uri_base | none %]/javascripts/netdisco-portcontrol.js?v=[% asset_version | none %]"></script>
+[% IF session.logged_in_user AND nd2_palette %]
+[%# the command palette (palette.js): its index is what the core and the web
+    plugins registered (App::Netdisco::Web::UI::palette_index); the device on
+    screen, if any, is what its actions are for -%]
+<div class="nd2-pal-overlay" hidden
+  data-nd2-palette="[% nd2_palette | html_entity %]"
+  data-nd2-search="[% uri_base | none %]/ajax/data/v2/search"
+  [% IF nd2_device %]data-nd2-ctx-device="[% nd2_device.ip | html_entity %]" data-nd2-ctx-name="[% display_name | html_entity %]"[% END %]></div>
+[% END %]
 <script type="module" src="[% uri_base | none %]/modern/js/shell.js?v=[% asset_version | none %]"></script>
+[% IF session.logged_in_user AND nd2_palette %]<script type="module" src="[% uri_base | none %]/modern/js/palette.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF session.logged_in_user %]<script type="module" src="[% uri_base | none %]/modern/js/theme.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF page_devices %]<script type="module" src="[% uri_base | none %]/modern/js/devices.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF session.logged_in_user %]<script type="module" src="[% uri_base | none %]/modern/js/jobs.js?v=[% asset_version | none %]"></script>[% END %]
