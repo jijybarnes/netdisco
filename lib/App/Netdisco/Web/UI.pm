@@ -4,12 +4,13 @@ use Dancer ':syntax';
 use Dancer::Plugin::Auth::Extensible;
 use Path::Class 'dir';
 use URI;
+use JSON::PP ();
 
 use base 'Exporter';
 our @EXPORT_OK = qw/
   web_ui_names valid_web_ui current_web_ui ui_include_paths safe_back_path
   back_from_referer device_tab_for page_segments nav_for crumbs_for
-  modern_dirs_for modern_shadowed_overrides
+  modern_dirs_for modern_shadowed_overrides palette_index
 /;
 
 =head1 NAME
@@ -277,6 +278,54 @@ hook 'before' => sub {
   var(web_ui => (valid_web_ui($picked) ? $picked : setting('_default_web_ui')));
 };
 
+=head2 palette_index( \%registry, \&may )
+
+Pure: what the command palette offers without asking the server, from what the
+core and the web plugins registered: the pages (Home, Devices, the navigation
+items), the reports, the admin tasks, and the search tabs, which the palette
+offers to search the typed text with. C<%registry> holds C<navbar_items>,
+C<reports>, C<reports_menu>, C<report_order>, C<admin_tasks>,
+C<admin_order> and C<search_tabs> as the settings of those names have them;
+C<may> is asked with a list of roles and says whether the user has one. A
+report or a task that is hidden is left out, as the menus leave it out, and
+so is a task the user may not open.
+
+=cut
+
+sub palette_index {
+  my ($r, $may) = @_;
+  $may ||= sub { 0 };
+  my @items = (
+    { group => 'Pages', label => 'Home', href => '/', icon => 'fa-house' },
+    { group => 'Pages', label => 'Devices', sub => 'Every device', href => '/devices', icon => 'fa-server' },
+    (map {{ group => 'Pages', label => $_->{label}, href => $_->{path},
+            icon => (($_->{icon} // '') =~ m/^fa-[a-z0-9-]+$/ ? $_->{icon}
+                     : ($_->{tag} // '') eq 'inventory' ? 'fa-boxes-stacked' : 'fa-circle-dot') }}
+     grep { $_->{label} and $_->{path} } @{ $r->{navbar_items} || [] }),
+  );
+
+  foreach my $cat (@{ $r->{report_order} || [] }) {
+    foreach my $tag (@{ ($r->{reports_menu} || {})->{$cat} || [] }) {
+      my $rep = ($r->{reports} || {})->{$tag} or next;
+      next if $rep->{hidden};
+      push @items, { group => 'Reports', label => $rep->{label}, sub => $cat,
+                     href => "/report/$tag?firstsearch=on", icon => 'fa-chart-column' };
+    }
+  }
+
+  foreach my $tag (@{ $r->{admin_order} || [] }) {
+    my $task = ($r->{admin_tasks} || {})->{$tag} or next;
+    next if $task->{hidden};
+    next unless $may->(['admin']) or ($task->{roles} and $may->($task->{roles}));
+    push @items, { group => 'Admin', label => $task->{label}, sub => 'Admin task',
+                   href => "/admin/$tag?firstsearch=on", icon => 'fa-gear' };
+  }
+
+  my @search = map {{ tag => $_->{tag}, label => $_->{label} }}
+               grep { $_->{tag} and $_->{label} and not $_->{hidden} } @{ $r->{search_tabs} || [] };
+  return { items => \@items, search_tabs => \@search };
+}
+
 hook 'before_template' => sub {
   my $tokens = shift;
   $tokens->{web_ui} = current_web_ui();
@@ -291,6 +340,17 @@ hook 'before_template' => sub {
     reports      => setting('_reports'),
     admin_tasks  => setting('_admin_tasks'),
   });
+
+  return unless session('logged_in_user');
+  $tokens->{nd2_palette} = JSON::PP->new->canonical->encode(palette_index({
+    navbar_items => setting('_navbar_items'),
+    reports      => setting('_reports'),
+    reports_menu => setting('_reports_menu'),
+    report_order => setting('_report_order'),
+    admin_tasks  => setting('_admin_tasks'),
+    admin_order  => setting('_admin_order'),
+    search_tabs  => setting('_search_tabs'),
+  }, sub { my $roles = shift; scalar grep { user_has_role($_) } @$roles }));
 };
 
 post '/web_ui' => require_login sub {

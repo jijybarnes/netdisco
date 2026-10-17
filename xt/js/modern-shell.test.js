@@ -59,3 +59,16 @@ test('a page without the search box ignores the key', () => {
   installSearchShortcut(doc);
   assert.equal(doc.press('/').prevented, false);
 });
+
+test('slash opens the palette when the page has one, still not from a field', () => {
+  const doc = fakeDocument({ tagName: 'BODY' });
+  const opened = [];
+  doc.nd2OpenPalette = (text) => opened.push(text);
+  installSearchShortcut(doc);
+  assert.equal(doc.press('/').prevented, true);
+  assert.deepEqual(opened, [''], 'opened empty: the slash is not what was searched for');
+  assert.equal(doc.box.focused, 0, 'the palette, not the box');
+  doc.activeElement = { tagName: 'INPUT' };
+  doc.press('/');
+  assert.equal(opened.length, 1);
+});

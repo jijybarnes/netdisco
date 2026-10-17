@@ -1777,3 +1777,109 @@ th:not(:has(.nd2-th)) {
     grid-column: 1 / -1;
   }
 }
+
+/* ---------- command palette ---------- */
+
+.nd2-pal-overlay {
+  position: fixed;
+  inset: 0;
+  /* above the top bar (1030), its menus and the drawer */
+  z-index: 1060;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgb(15 17 21 / .45);
+  backdrop-filter: blur(2px);
+}
+
+.nd2-pal-overlay[hidden] { display: none; }
+
+.nd2-pal {
+  width: min(640px, 94vw);
+  background: var(--nd2-surface);
+  color: var(--nd2-text);
+  border: 1px solid var(--nd2-border);
+  border-radius: 12px;
+  box-shadow: var(--nd2-shadow);
+  overflow: hidden;
+}
+
+.nd2-pal-in {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--nd2-border);
+  color: var(--nd2-muted);
+}
+
+.nd2-pal-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--nd2-text);
+  font-size: 16px;
+}
+
+.nd2-pal-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.nd2-pal-grp {
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--nd2-muted);
+}
+
+.nd2-pal-it {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.nd2-pal-it > i { width: 16px; text-align: center; color: var(--nd2-muted); }
+.nd2-pal-it.nd2-act { background: var(--nd2-accent-soft); }
+.nd2-pal-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nd2-pal-sub { margin-left: auto; padding-left: 12px; color: var(--nd2-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+.nd2-pal mark { padding: 0; background: none; color: var(--nd2-accent-text, var(--nd2-accent)); font-weight: 700; }
+.nd2-pal-status:empty { display: none; }
+.nd2-pal-status { padding: 6px 16px; color: var(--nd2-muted); font-size: 12.5px; }
+
+.nd2-pal-foot {
+  display: flex;
+  gap: 14px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--nd2-border);
+  color: var(--nd2-muted);
+  font-size: 12px;
+}
+
+.nd2-pal-esc, .nd2-pal-foot kbd {
+  padding: 1px 5px;
+  margin-right: 2px;
+  border: 1px solid var(--nd2-border-strong);
+  border-radius: 4px;
+  background: var(--nd2-surface-2);
+  color: var(--nd2-text-2);
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .nd2-pal-overlay { padding-top: 0; }
+  .nd2-pal { width: 100vw; border-radius: 0 0 12px 12px; }
+  .nd2-pal-foot { display: none; }
+  .nd2-pal-sub { display: none; }
+}

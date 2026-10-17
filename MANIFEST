@@ -188,6 +188,7 @@ lib/App/Netdisco/Web/Data/Device.pm
 lib/App/Netdisco/Web/Data/Devices.pm
 lib/App/Netdisco/Web/Data/Jobs.pm
 lib/App/Netdisco/Web/Data/Ports.pm
+lib/App/Netdisco/Web/Data/Search.pm
 lib/App/Netdisco/Web/Device.pm
 lib/App/Netdisco/Web/DeviceOverview.pm
 lib/App/Netdisco/Web/DevicesPage.pm
@@ -408,6 +409,7 @@ share/public/modern/js/dom.js
 share/public/modern/js/drawer.js
 share/public/modern/js/jobs-core.js
 share/public/modern/js/jobs.js
+share/public/modern/js/palette.js
 share/public/modern/js/ports.js
 share/public/modern/js/shell.js
 share/public/modern/js/theme-pref.js
@@ -755,6 +757,7 @@ xt/150-jobs-and-reasons.t
 xt/151-modern-shell-and-devices.t
 xt/152-devices-page-template.t
 xt/153-modern-ui-plugins.t
+xt/154-palette-and-search.t
 xt/20-checkacl.t
 xt/21-check_acl_no_ipaddr_only.t
 xt/30-backend-workers.t
@@ -840,6 +843,7 @@ xt/js/modern-device.test.js
 xt/js/modern-devices.test.js
 xt/js/modern-drawer.test.js
 xt/js/modern-jobs.test.js
+xt/js/modern-palette.test.js
 xt/js/modern-ports.test.js
 xt/js/modern-shell.test.js
 xt/js/modern-theme.test.js
