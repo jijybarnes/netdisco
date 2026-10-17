@@ -9,6 +9,7 @@ use base 'Exporter';
 our @EXPORT_OK = qw/
   web_ui_names valid_web_ui current_web_ui ui_include_paths safe_back_path
   back_from_referer device_tab_for page_segments nav_for crumbs_for
+  modern_dirs_for modern_shadowed_overrides
 /;
 
 =head1 NAME
@@ -72,11 +73,73 @@ a code ref at the front of the template engine's C<INCLUDE_PATH>, which
 Template Toolkit expands on every lookup, so the overlay follows the request
 rather than being fixed when the engine is built.
 
+For the modern interface these are, in order: the C<views-modern> beside each
+of the site's C<template_paths>, the C<views-modern> of each plugin that
+registered a template path (the last registered first, as for C<views>), and
+F<share/views-modern>. A template none of them has falls through to the
+classic chain behind, site, plugins, then F<share/views>, so a site or a
+plugin overriding a template the modern interface does not draw itself is
+used by both interfaces.
+
 =cut
 
 sub ui_include_paths {
   my $sub = $VIEWS_DIR{ current_web_ui() } or return [];
-  return [ dir(setting('views'))->parent->subdir($sub)->stringify ];
+  return [ @{ setting('_ui_override_paths') || [] },
+           dir(setting('views'))->parent->subdir($sub)->stringify ];
+}
+
+=head2 modern_dirs_for( @template_paths )
+
+Where a site's modern templates sit, for each of its C<template_paths>: beside
+a directory named F<views> (F<.../share/views> gives F<.../share/views-modern>),
+else inside it. Only those that exist, each once, in the given order.
+
+=cut
+
+sub modern_dirs_for {
+  my %seen;
+  return grep { -d $_ and not $seen{$_}++ }
+         map  { my $d = dir($_);
+                ($d->basename eq 'views' ? $d->parent->subdir('views-modern')
+                                         : $d->subdir('views-modern'))->stringify }
+         grep { defined and length } @_;
+}
+
+=head2 modern_shadowed_overrides( \@classic_dirs, \@modern_dirs, $core_modern )
+
+The classic overrides the modern interface does not use: each template under
+one of C<@classic_dirs> (a site's C<template_paths>, a plugin's views) whose
+name the modern interface draws itself in C<$core_modern> and that none of
+C<@modern_dirs> overrides for it. The modern template is drawn from other data
+than the classic one, so the classic override cannot stand in for it. Returns
+C<[ dir, template ]> pairs, sorted.
+
+=cut
+
+sub modern_shadowed_overrides {
+  my ($classic, $modern, $core) = @_;
+  return () unless defined $core and -d $core;
+
+  my %drawn;
+  dir($core)->recurse(callback => sub {
+    my $f = shift;
+    return if $f->is_dir or $f->basename !~ m/\.tt$/;
+    $drawn{ $f->relative($core)->as_foreign('Unix')->stringify } = 1;
+  });
+  # a layout is never looked up under template_paths, so overriding one there
+  # changes nothing in either interface
+  delete $drawn{$_} for grep { m{^layouts/} } keys %drawn;
+
+  my @found;
+  foreach my $c (grep { defined and -d $_ } @{ $classic || [] }) {
+    foreach my $t (sort keys %drawn) {
+      next unless -f dir($c)->file($t);
+      next if grep { -f dir($_)->file($t) } @{ $modern || [] };
+      push @found, [ "$c", $t ];
+    }
+  }
+  return sort { $a->[0] cmp $b->[0] or $a->[1] cmp $b->[1] } @found;
 }
 
 =head2 safe_back_path( $path )

@@ -21,6 +21,9 @@ set(
   '_admin_order'  => [],
   '_reports_menu' => {},
   '_reports' => {},
+  # the views and views-modern directories plugins registered, last first
+  '_plugin_template_paths' => [],
+  '_plugin_modern_template_paths' => [],
   '_report_order' => [qw/Device Port IP Node VLAN Network Wireless/, 'My Reports'],
 );
 
@@ -36,6 +39,13 @@ register 'register_template_path' => sub {
 
   unshift @{ config->{engines}->{netdisco_template_toolkit}->{INCLUDE_PATH} },
        dir($path, 'views')->stringify;
+  unshift @{ setting('_plugin_template_paths') }, dir($path, 'views')->stringify;
+
+  # a plugin draws its pages for the modern interface from views-modern, if it
+  # has one (see App::Netdisco::Web::UI::ui_include_paths)
+  my $modern = dir($path, 'views-modern');
+  unshift @{ setting('_plugin_modern_template_paths') }, $modern->stringify
+    if -d $modern;
 };
 
 sub _register_include {
@@ -292,6 +302,38 @@ Admin Menu function (job control, manual topology, pseudo devices)
 =back
 
 See L<https://github.com/netdisco/netdisco/wiki/Web-Plugins> for details.
+
+=head1 The modern web interface
+
+Everything a plugin registers is used by both interfaces: navigation items,
+reports, admin tasks, device and search tabs (with their sidebars), device
+details, CSS and JavaScript, and device port columns. For the modern one:
+
+=over 4
+
+=item *
+
+A plugin column's F<plugin/E<lt>nameE<gt>/device_port_column.tt> is drawn on
+the server with C<row>, C<device> and C<config> as in the classic Ports tab,
+and its F<device_port_column_csv.tt> writes its CSV values, as there. The
+modern tab sorts and filters the column by its text. After drawing the table
+it fires C<nd2:ports-drawn> on the tab, for a plugin's script that works on
+the cells it drew.
+
+=item *
+
+A plugin's own templates are used for the pages the modern interface draws
+itself only from a F<views-modern> directory beside the F<views> one given to
+C<register_template_path>: those pages are drawn from other data than the
+classic ones. Netdisco says at startup which classic overrides the modern
+interface does not use.
+
+=item *
+
+A navigation item may name its icon on the modern interface's rail, as a Font
+Awesome name: C<icon =E<gt> 'fa-phone'>.
+
+=back
 
 =cut
 

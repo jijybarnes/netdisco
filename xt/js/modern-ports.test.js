@@ -6,7 +6,7 @@ import {
   isPhysical, faceplateLayout, vlanSlots, portLook, legendFor, CHIPS, matchesText,
   filterPorts, sortPorts, COLUMNS, usableColumns, visibleColumns, loadPrefs, savePrefs,
   portLabel, DEFAULT_COLUMNS, setTabCount, COLUMN_ORDER, COLUMN_LABEL, isFoldedSubinterface, customColumn,
-  viewOptions,
+  viewOptions, readServerCells, serverColumn, serverKey, columnDef,
 } from '../../share/public/modern/js/ports.js';
 
 const port = (name, extra = {}) => ({
@@ -346,8 +346,51 @@ test('usableColumns: the tab\'s headings, and the site\'s for what the tab does 
   assert.equal(byName.c_speed, 'Speed');
   assert.equal(byName.c_vmember, 'VLAN membership');
   assert.equal(byName.c_mtu, 'MTU', 'the site\'s label for a column the tab has no heading for');
-  assert.deepEqual(Object.keys(COLUMN_LABEL).filter((n) => !COLUMNS[n]), [], 'headings only for columns that exist');
+  assert.deepEqual(Object.keys(COLUMN_LABEL).filter((n) => !COLUMNS[n]), ['c_links'],
+    'headings only for columns that exist: the tab\'s own, and the external links, which the server draws');
   // unknown columns follow the named ones, in the site's order
   const extra = usableColumns([{ name: 'c_ifindex', label: 'IF' }, { name: 'c_mtu', label: 'MTU' }, { name: 'c_port', label: 'Port' }]);
   assert.deepEqual(extra.map((c) => c.name), ['c_port', 'c_ifindex', 'c_mtu']);
+});
+
+// ---------- columns a plugin draws ----------
+
+// A stand-in for the pane's <template>: what readServerCells reads of it.
+function fakeTemplate(cells) {
+  const nodes = cells.map(([col, port, text]) => ({
+    getAttribute: (a) => (a === 'data-col' ? col : port), textContent: text, childNodes: text ? [{ text }] : [],
+  }));
+  return { content: { querySelectorAll: () => nodes } };
+}
+
+test('readServerCells: each cell by column and port, and each port\'s text for the filter', () => {
+  const server = readServerCells(fakeTemplate([['asset', 'Gi1', ' A-1 '], ['c_links', 'Gi1', 'wiki'], ['asset', 'Gi2', '']]));
+  assert.equal(server.cells.size, 3);
+  assert.equal(server.cells.get(serverKey('asset', 'Gi1')).textContent, ' A-1 ');
+  assert.equal(server.text.get('Gi1'), '\nA-1\nwiki');
+  assert.equal(server.text.has('Gi2'), false, 'an empty cell adds nothing to look for');
+  assert.deepEqual(readServerCells(null).cells.size, 0, 'no template, no cells');
+});
+
+test('serverColumn: a cell to clone, an empty one a dash; sorted and found by its text', () => {
+  const server = readServerCells(fakeTemplate([['asset', 'Gi1', 'B-2'], ['asset', 'Gi2', 'A-1']]));
+  const ctx = { vlans: [], view: {}, server };
+  const col = serverColumn('asset');
+  assert.ok(col.cells({ port: 'Gi1' }, new Set(), ctx)[0].clone, 'the server\'s nodes, not text');
+  assert.deepEqual(col.cells({ port: 'Gi9' }, new Set(), ctx).map((x) => x.text), ['—']);
+  assert.deepEqual(sortPorts([{ port: 'Gi1' }, { port: 'Gi2' }], 'asset', 1, col, ctx).map((p) => p.port), ['Gi2', 'Gi1']);
+  assert.deepEqual(filterPorts([{ port: 'Gi1' }, { port: 'Gi2' }], { q: 'b-2', server }).map((p) => p.port), ['Gi1']);
+});
+
+test('columnDef: a plugin template wins over a custom field value, as in the classic tab', () => {
+  assert.equal(columnDef({ name: 'room', custom: true, server: true }).sortWith !== undefined, true);
+  assert.equal(columnDef({ name: 'room', custom: true }).sortWith, undefined);
+  assert.equal(columnDef({ name: 'plugin_col' }), null, 'a plugin column without a template is not drawn');
+});
+
+test('visibleColumns: a plugin column opens as the plugin set it', () => {
+  const offered = [{ name: 'c_port', default: true }, { name: 'asset', label: 'Asset', default: true, server: true },
+    { name: 'room', label: 'Room', default: false, custom: true }];
+  assert.deepEqual(visibleColumns(offered, {}).map((c) => c.name), ['c_port', 'asset']);
+  assert.deepEqual(visibleColumns(offered, { asset: false, room: true }).map((c) => c.name), ['c_port', 'room']);
 });

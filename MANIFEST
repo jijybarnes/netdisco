@@ -777,6 +777,7 @@ xt/509-ports-modern.t
 xt/510-jobs-and-reasons.t
 xt/511-modern-shell-and-devices.t
 xt/512-devices-page-template.t
+xt/513-modern-ui-plugins.t
 xt/51-updated-device-hook.t
 xt/52-token-acl-auth.t
 xt/53-ports-csv-arity.t

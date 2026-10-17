@@ -123,7 +123,7 @@ export const CHIPS = [
   { key: 'free', label: 'Free', test: (p) => p.is_free === true },
 ];
 
-function haystack(p, vlans) {
+function haystack(p, vlans, server) {
   const n = p.neighbor || {};
   const inv = n.inventory || {};
   const last = p.last_node || {};
@@ -132,7 +132,8 @@ function haystack(p, vlans) {
   return [p.port, p.name, p.descr, p.mac, p.type, p.error_disable_cause, n.ip, n.dns, n.port, n.id,
     inv.vendor, inv.model, inv.serial, last.mac, last.ip, last.dns, last.vendor, p.last_comment,
     p.nac && p.nac.user, ...(p.ssids || []), ...Object.values(p.custom_fields || {}).map((v) => (v == null ? null : String(v))),
-    ...(p.vlans || []).map(String), p.native_vlan != null ? String(p.native_vlan) : null, ...(p.tags || []), ...names]
+    ...(p.vlans || []).map(String), p.native_vlan != null ? String(p.native_vlan) : null, ...(p.tags || []), ...names,
+    server && server.text.get(p.port)]
     .filter((v) => v != null).join('\n').toLowerCase();
 }
 
@@ -151,10 +152,10 @@ export function parseFilter(q) {
   });
 }
 
-export function matchesText(p, q, vlans) {
+export function matchesText(p, q, vlans, server) {
   const words = Array.isArray(q) ? q : parseFilter(q);
   if (!words.length) return true;
-  const hay = haystack(p, vlans);
+  const hay = haystack(p, vlans, server);
   return words.every(({ not, word, re }) => (re ? re.test(hay) : hay.includes(word)) !== not);
 }
 
@@ -165,21 +166,21 @@ export function isFoldedSubinterface(p, names) {
   return !!(m && names.has(m[1]));
 }
 
-export function filterPorts(ports, { chips = new Set(), q = '', vlans = [], view = {} } = {}) {
+export function filterPorts(ports, { chips = new Set(), q = '', vlans = [], view = {}, server = null } = {}) {
   const tests = CHIPS.filter((c) => chips.has(c.key)).map((c) => c.test);
   const words = parseFilter(q);
   const names = new Set(ports.map((p) => p.port));
-  return ports.filter((p) => tests.every((t) => t(p)) && matchesText(p, words, vlans)
+  return ports.filter((p) => tests.every((t) => t(p)) && matchesText(p, words, vlans, server)
     && !(view.foldSubinterfaces && isFoldedSubinterface(p, names)));
 }
 
 // Stable: equal keys keep the order the API sent, which is port order.
 // def: the column's definition when it is not one of COLUMNS (a custom field)
-export function sortPorts(ports, column, dir = 1, def = null) {
+export function sortPorts(ports, column, dir = 1, def = null, ctx = NO_CTX) {
   const col = COLUMNS[column] || def;
   const indexed = ports.map((p, i) => [p, i]);
-  if (!col || !col.sort) return dir < 0 ? indexed.reverse().map(([p]) => p) : ports.slice();
-  const key = col.sort;
+  const key = col && (col.sort || (col.sortWith && col.sortWith(ctx)));
+  if (!key) return dir < 0 ? indexed.reverse().map(([p]) => p) : ports.slice();
   indexed.sort(([a, i], [b, j]) => {
     const x = key(a, i), y = key(b, j);
     const empty = (v) => v == null || v === '';
@@ -311,7 +312,39 @@ export function customColumn(name) {
   };
 }
 
-export const columnDef = (c) => COLUMNS[c.name] || (c.custom ? customColumn(c.name) : null);
+// A column drawn on the server by a plugin's own template (and the external
+// links): its cells are cloned from the pane's <template class="nd2-server-cells">,
+// read once into ctx.server, a map from serverKey(column, port) to the
+// element holding the cell. Sorted and searched by its text.
+export const serverKey = (col, port) => `${col}\u0000${port}`;
+
+export function readServerCells(tpl) {
+  const cells = new Map();
+  const text = new Map();
+  if (!tpl || !tpl.content) return { cells, text };
+  tpl.content.querySelectorAll('[data-port][data-col]').forEach((d) => {
+    const port = d.getAttribute('data-port');
+    cells.set(serverKey(d.getAttribute('data-col'), port), d);
+    const t = (d.textContent || '').replace(/\s+/g, ' ').trim();
+    if (t) text.set(port, `${text.get(port) || ''}\n${t}`);
+  });
+  return { cells, text };
+}
+
+export function serverColumn(name) {
+  const cell = (p, ctx) => ctx && ctx.server && ctx.server.cells.get(serverKey(name, p.port));
+  return {
+    cells: (p, shown, ctx = NO_CTX) => {
+      const d = cell(p, ctx);
+      return d && d.childNodes.length ? [{ clone: d }] : dash([]);
+    },
+    sortWith: (ctx) => (p) => { const d = cell(p, ctx); return d ? d.textContent.trim().toLowerCase() : ''; },
+  };
+}
+
+// a plugin's own template first, as the classic tab tries it first; a custom
+// field without one is its value
+export const columnDef = (c) => (c.server ? serverColumn(c.name) : (COLUMNS[c.name] || (c.custom ? customColumn(c.name) : null)));
 
 // The columns the server offers (settings.port_columns, in its order, with the
 // site's labels and defaults) that this tab can draw. Port is always shown.
@@ -327,7 +360,7 @@ export const COLUMN_LABEL = {
   c_up: 'Status', c_name: 'Name', c_descr: 'Description', c_speed: 'Speed', c_speed_admin: 'Speed (set)',
   c_duplex: 'Duplex', c_duplex_admin: 'Duplex (set)', c_pvid: 'Native VLAN', c_vmember: 'VLAN membership',
   c_power: 'PoE', c_nodes: 'Connected nodes', c_neighbors: 'Connected device', c_stp: 'Spanning tree', c_lastchange: 'Last change',
-  c_comment: 'Last comment', c_nac_summary: '802.1X',
+  c_comment: 'Last comment', c_nac_summary: '802.1X', c_links: 'Links',
 };
 
 export function usableColumns(offered) {
@@ -346,9 +379,12 @@ export function usableColumns(offered) {
 // The site's order and labels are kept.
 export const DEFAULT_COLUMNS = new Set(['c_port', 'c_up', 'c_name', 'c_speed', 'c_pvid', 'c_vmember', 'c_power', 'c_nodes', 'c_neighbors']);
 
+// A plugin's or a custom field's column is not one of the tab's own, so it
+// opens as the plugin or the site set it (its default), as in the classic tab.
 export function visibleColumns(offered, prefs) {
+  const dflt = (c) => (COLUMNS[c.name] && !c.server ? DEFAULT_COLUMNS.has(c.name) : !!c.default);
   return usableColumns(offered).filter((c) => c.name === 'c_port'
-    || (prefs && Object.prototype.hasOwnProperty.call(prefs, c.name) ? prefs[c.name] : DEFAULT_COLUMNS.has(c.name)));
+    || (prefs && Object.prototype.hasOwnProperty.call(prefs, c.name) ? prefs[c.name] : dflt(c)));
 }
 
 // ---------- preferences ----------
@@ -391,6 +427,10 @@ export function viewOptions(saved, site = {}) {
 
 
 function renderPart(doc, part, uriBase) {
+  if (part.clone) {
+    // nodes, not a string: importNode copies what the server drew as it is
+    return el(doc, 'span', { class: 'nd2-plugin-cell' }, [...part.clone.childNodes].map((n) => doc.importNode(n, true)));
+  }
   if (part.time) {
     return el(doc, 'time', { datetime: part.time, 'data-nd2-relative': true, text: part.time });
   }
@@ -432,6 +472,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     sort: 'c_port', dir: 1, mode: prefs.mode || 'status', selected: null,
     hidden: false, faceplate: prefs.faceplate !== false, slots: new Map(),
     vlans: [], view: viewOptions(prefs.view, site),
+    server: readServerCells(root.querySelector('template.nd2-server-cells')),
   };
   const drawer = createDrawer({
     doc, win, fetchJson, post, toast, uriBase, reasons, device, apiBase, fields,
@@ -515,7 +556,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
   function drawTable() {
     const cols = visibleColumns(offered, prefs.columns);
     const shown = new Set(cols.map((c) => c.name));
-    const ctx = { vlans: state.vlans, view: state.view };
+    const ctx = { vlans: state.vlans, view: state.view, server: state.server };
     const thead = el(doc, 'thead', {}, [el(doc, 'tr', {}, cols.map((c) => {
       const sorted = state.sort === c.name;
       const th = el(doc, 'th', {
@@ -530,7 +571,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
       });
       return th;
     }))]);
-    const rows = sortPorts(state.shown, state.sort, state.dir, columnDef(cols.find((c) => c.name === state.sort) || {}));
+    const rows = sortPorts(state.shown, state.sort, state.dir, columnDef(cols.find((c) => c.name === state.sort) || {}), ctx);
     const tbody = el(doc, 'tbody', {}, rows.map((p) => {
       const tr = el(doc, 'tr', { 'data-nd2-port': p.port, tabindex: '0', class: state.selected === p.port && 'nd2-sel' },
         cols.map((c) => el(doc, 'td', { class: columnDef(c).num && 'nd2-num', 'data-label': c.label, 'data-col': c.name },
@@ -547,6 +588,8 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     }
     table.replaceChildren(thead, tbody);
     count.textContent = `${state.shown.length} of ${state.ports.length} ports`;
+    // for a plugin's script (register_javascript) that works on the cells it drew
+    root.dispatchEvent(new CustomEvent('nd2:ports-drawn', { bubbles: true, detail: { device, table } }));
   }
 
   function refilter() {

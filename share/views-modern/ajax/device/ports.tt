@@ -100,5 +100,25 @@
   <div class="nd2-tablewrap">
     <table class="nd2-ports-table"><tbody><tr><td class="nd2-empty">Loading the ports…</td></tr></tbody></table>
   </div>
+  [%# Plugin columns and external links, drawn here with the plugin's own
+      template exactly as the classic tab draws them (row, device and config
+      are what it has there), into an inert template that ports.js clones its
+      cells from: the browser never builds markup from a string. A template
+      that fails leaves its cell empty rather than the tab. -%]
+  [% IF server_columns.size %]
+  [% PROCESS 'externallinks.tt' %]
+  <template class="nd2-server-cells">
+  [% FOREACH row IN server_rows %]
+    [% FOREACH config IN server_columns %]
+      [% IF config.name == 'c_links' %]
+    <div data-port="[% row.port | html_entity %]" data-col="c_links">[% INCLUDE external_device_port_links item = row d = device %]</div>
+      [% ELSE %]
+        [% NEXT UNLESS permitted_by_acl(row, config) %]
+    <div data-port="[% row.port | html_entity %]" data-col="[% config.name | html_entity %]">[% TRY %][% INCLUDE "plugin/${config.name}/device_port_column.tt" %][% CATCH %][% CLEAR %][% END %]</div>
+      [% END %]
+    [% END %]
+  [% END %]
+  </template>
+  [% END %]
   <div class="nd2-tablefoot" aria-live="polite"><span class="nd2-ports-count"></span><span class="nd2-hint">Select a port for its details and controls</span></div>
 </div>
