@@ -11,9 +11,10 @@
 // xt/js/modern-palette.test.js; createPalette is the DOM part.
 
 import { el, debounce } from './dom.js';
+import { readRecent, rememberDevice } from './recent.js';
 
-export const RECENT_KEY = 'nd2.recent.v1';
-export const RECENT_MAX = 8;
+export { readRecent, rememberDevice, RECENT_KEY, RECENT_MAX } from './recent.js';
+
 const PER_GROUP = 5;
 
 // ---------- where things are ----------
@@ -165,25 +166,6 @@ export function deviceActions(device, context = {}) {
     group: 'This device', icon: 'fa-play', label: `${job[0].toUpperCase()}${job.slice(1)} ${name}`, sub: 'Queue a job', job, verb: `${job} run poll`,
   }));
   return [...tabs, ...jobs];
-}
-
-// ---------- recent devices ----------
-
-export function readRecent(storage) {
-  try {
-    const v = JSON.parse(storage.getItem(RECENT_KEY) || '[]');
-    return Array.isArray(v) ? v.filter((r) => r && typeof r.ip === 'string').slice(0, RECENT_MAX) : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-export function rememberDevice(storage, device) {
-  if (!device || !device.ip) return readRecent(storage);
-  const list = [{ ip: String(device.ip), name: String(device.name || device.ip) },
-    ...readRecent(storage).filter((r) => r.ip !== device.ip)].slice(0, RECENT_MAX);
-  try { storage.setItem(RECENT_KEY, JSON.stringify(list)); } catch (e) { /* private mode, quota */ }
-  return list;
 }
 
 // ---------- the palette ----------

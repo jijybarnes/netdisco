@@ -240,6 +240,7 @@
 [% IF session.logged_in_user AND nd2_palette %]<script type="module" src="[% uri_base | none %]/modern/js/palette.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF session.logged_in_user %]<script type="module" src="[% uri_base | none %]/modern/js/theme.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF page_devices %]<script type="module" src="[% uri_base | none %]/modern/js/devices.js?v=[% asset_version | none %]"></script>[% END %]
+[% IF nd2_home %]<script type="module" src="[% uri_base | none %]/modern/js/home.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF session.logged_in_user %]<script type="module" src="[% uri_base | none %]/modern/js/jobs.js?v=[% asset_version | none %]"></script>[% END %]
 [% IF device %]<script type="module" src="[% uri_base | none %]/modern/js/device.js?v=[% asset_version | none %]"></script>
 <script type="module" src="[% uri_base | none %]/modern/js/ports.js?v=[% asset_version | none %]"></script>[% END %]

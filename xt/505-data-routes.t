@@ -95,6 +95,13 @@ subtest 'jobsRoute__both_addresses__are_routed_and_documented' => sub {
     ['limit'], 'with its limit parameter';
 };
 
+subtest 'summaryRoute__both_addresses__are_routed_and_documented' => sub {
+  route_exists [ GET => '/api/v2/summary' ], 'GET /api/v2/summary';
+  { local $ENV{HTTP_X_REQUESTED_WITH} = 'XMLHttpRequest';
+    route_exists [ GET => '/ajax/data/v2/summary' ], 'GET /ajax/data/v2/summary'; }
+  ok( Dancer::Plugin::Swagger->instance->doc->{paths}{'/api/v2/summary'}{get}, 'documented' );
+};
+
 subtest 'searchRoute__both_addresses__are_routed_and_documented' => sub {
   route_exists [ GET => '/api/v2/search' ], 'GET /api/v2/search';
   { local $ENV{HTTP_X_REQUESTED_WITH} = 'XMLHttpRequest';

@@ -189,10 +189,12 @@ lib/App/Netdisco/Web/Data/Devices.pm
 lib/App/Netdisco/Web/Data/Jobs.pm
 lib/App/Netdisco/Web/Data/Ports.pm
 lib/App/Netdisco/Web/Data/Search.pm
+lib/App/Netdisco/Web/Data/Summary.pm
 lib/App/Netdisco/Web/Device.pm
 lib/App/Netdisco/Web/DeviceOverview.pm
 lib/App/Netdisco/Web/DevicesPage.pm
 lib/App/Netdisco/Web/GenericReport.pm
+lib/App/Netdisco/Web/HomePage.pm
 lib/App/Netdisco/Web/Health.pm
 lib/App/Netdisco/Web/Metrics.pm
 lib/App/Netdisco/Web/Password.pm
@@ -407,10 +409,12 @@ share/public/modern/js/device.js
 share/public/modern/js/devices.js
 share/public/modern/js/dom.js
 share/public/modern/js/drawer.js
+share/public/modern/js/home.js
 share/public/modern/js/jobs-core.js
 share/public/modern/js/jobs.js
 share/public/modern/js/palette.js
 share/public/modern/js/ports.js
+share/public/modern/js/recent.js
 share/public/modern/js/shell.js
 share/public/modern/js/theme-pref.js
 share/public/modern/js/theme.js
@@ -559,11 +563,14 @@ share/schema_versions/App-Netdisco-DB-96-97-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-97-98-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-98-99-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-99-100-PostgreSQL.sql
+share/views-modern/ajax/device/details.tt
+share/views-modern/ajax/device/modules.tt
 share/views-modern/ajax/device/overview.tt
 share/views-modern/ajax/device/ports.tt
 share/views-modern/ajax/device/ports_csv.tt
 share/views-modern/device.tt
 share/views-modern/devices.tt
+share/views-modern/index.tt
 share/views-modern/layouts/main.tt
 share/views-modern/sidebar/device/ports.tt
 share/views/admintask.tt
@@ -781,6 +788,7 @@ xt/511-modern-shell-and-devices.t
 xt/512-devices-page-template.t
 xt/513-modern-ui-plugins.t
 xt/514-palette-and-search.t
+xt/515-modern-details-modules-home.t
 xt/51-updated-device-hook.t
 xt/52-token-acl-auth.t
 xt/53-ports-csv-arity.t
@@ -842,6 +850,7 @@ xt/js/history-ownership.test.js
 xt/js/modern-device.test.js
 xt/js/modern-devices.test.js
 xt/js/modern-drawer.test.js
+xt/js/modern-home.test.js
 xt/js/modern-jobs.test.js
 xt/js/modern-palette.test.js
 xt/js/modern-ports.test.js

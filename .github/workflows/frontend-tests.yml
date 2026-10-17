@@ -168,6 +168,20 @@ jobs:
       - name: The list's address, order and cells
         run: node --test xt/js/modern-devices.test.js
 
+  modern-home:
+    name: modern home page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # Same naming rule as the jobs above: name the file, never a glob.
+      - name: The recent devices it lists
+        run: node --test xt/js/modern-home.test.js
+
   modern-palette:
     name: modern command palette
     runs-on: ubuntu-latest
