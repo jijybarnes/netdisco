@@ -9,7 +9,8 @@ use App::Netdisco::Web::Data::Ports 'device_ports';
 use App::Netdisco::Util::Web 'device_display_name';
 
 use base 'Exporter';
-our @EXPORT_OK = qw/modern_ports_pane port_column_offer port_reasons port_view_defaults short_device_name/;
+our @EXPORT_OK = qw/modern_ports_pane port_column_offer port_reasons port_view_defaults short_device_name
+                    server_port_columns/;
 
 =head1 NAME
 
@@ -41,7 +42,8 @@ own templates).
 =cut
 
 sub port_column_offer {
-  my $columns = shift || [];
+  my ($columns, $server) = @_;
+  my %server = map {( $_ => 1 )} @{ $server || [] };
   return [ map {
     my $custom = (($_->{field} // '') =~ m/^cf_/) ? 1 : 0;
     +{
@@ -49,8 +51,44 @@ sub port_column_offer {
       label   => ($_->{label} // $_->{name}),
       default => ($_->{default} ? JSON::PP::true : JSON::PP::false),
       ($custom ? (custom => JSON::PP::true, editable => ($_->{editable} ? JSON::PP::true : JSON::PP::false)) : ()),
+      ($server{ $_->{name} } ? (server => JSON::PP::true) : ()),
     }
-  } grep { $_->{name} } @$columns ];
+  } grep { $_->{name} and not $_->{hidden} } @$columns ];
+}
+
+=head2 server_port_columns( \@extra_columns, \&has_template, $links )
+
+The columns whose cells are drawn on the server, with the plugin's own
+template as the classic tab draws them: each plugin column
+(C<register_device_port_column>) that ships
+F<plugin/E<lt>nameE<gt>/device_port_column.tt>, and C<c_links>, the external
+links, when C<$links> says the site has some. C<has_template> is asked with
+the template's name. Hidden columns are left out, as there.
+
+=cut
+
+sub server_port_columns {
+  my ($extra, $has_template, $links) = @_;
+  my @names = map { $_->{name} }
+              grep { $_->{name} and not $_->{hidden}
+                     and $has_template->("plugin/$_->{name}/device_port_column.tt") }
+              @{ $extra || [] };
+  push @names, 'c_links' if $links;
+  return \@names;
+}
+
+sub _has_template {
+  my $name = shift;
+  my $engine = Dancer::Template->engine or return 0;
+  return $engine->view($name) ? 1 : 0;
+}
+
+# the ports as the classic tab hands them to plugin templates: device_port rows
+# with the same joins, in the same order, hidden ones too (the browser may ask
+# for them without coming back here)
+sub _template_rows {
+  my $device = shift;
+  return [ $device->ports->with_properties->with_custom_fields->order_by_port_name->all ];
 }
 
 =head2 port_view_defaults( \%device_ports_defaults )
@@ -108,8 +146,17 @@ sub modern_ports_pane {
   my $device = $schema->resultset('Device')->search_for_device(param('q'))
     or send_error('Bad device', 400);
 
+  my @extra = grep { not $_->{hidden} } @{ setting('_extra_device_port_cols') || [] };
+  my $links = scalar @{ (setting('external_links') || {})->{device_port} || [] };
+
   if (request->is_ajax) {
+    my $server = server_port_columns(\@extra, \&_has_template, $links);
+    my %server = map {( $_ => 1 )} @$server;
     return template 'ajax/device/ports.tt', {
+      device    => $device,
+      server_columns => [ (grep { $server{ $_->{name} } } @extra),
+                          ($server{c_links} ? ({ name => 'c_links' }) : ()) ],
+      server_rows => (@$server ? _template_rows($device) : []),
       device_ip => $device->ip,
       device_name => short_device_name(device_display_name($device) || $device->ip),
       model     => ($device->model // ''),
@@ -117,7 +164,7 @@ sub modern_ports_pane {
       view_defaults => JSON::PP->new->canonical->encode(port_view_defaults(setting('sidebar_defaults')->{'device_ports'})),
       # not 'filter': with ANYCASE that is the FILTER directive
       port_filter => scalar param('f'),
-      columns   => JSON::PP->new->canonical->encode(port_column_offer(setting('port_columns'))),
+      columns   => JSON::PP->new->canonical->encode(port_column_offer(setting('port_columns'), $server)),
       reasons   => JSON::PP->new->canonical->encode(port_reasons(setting('port_control_reasons'))),
     }, { layout => 'noop' };
   }
@@ -126,6 +173,10 @@ sub modern_ports_pane {
   header('Content-Type' => 'text/comma-separated-values');
   template 'ajax/device/ports_csv.tt', {
     ports => device_ports($schema, $device, include_hidden => scalar param('include_hidden')),
+    device => $device,
+    # the plugin and custom field columns, as the classic CSV has them
+    extra_columns => \@extra,
+    rows_by_port => (@extra ? { map {( $_->port => $_ )} @{ _template_rows($device) } } : {}),
   }, { layout => 'noop' };
 }
 

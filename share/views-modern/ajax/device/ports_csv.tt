@@ -4,14 +4,33 @@
     an empty line because PRE_CHOMP takes one newline before every directive,
     as in the classic CSV templates. -%]
 [% USE CSV -%]
-[% CSV.dump([ 'Port', 'Status', 'Name', 'Description', 'Type', 'Speed', 'Duplex', 'Native VLAN', 'VLANs',
-              'PoE (mW)', 'Nodes', 'Neighbor IP', 'Neighbor Port', 'Neighbor Name', 'Last Change', 'MAC', 'MTU' ]) %]
+[%# Then the plugin and custom field columns (extra_columns), each as the
+    classic CSV writes it: the plugin's device_port_column_csv.tt, which pushes
+    its values onto myport, else the column's field of the port's row. -%]
+[% SET headers = [ 'Port', 'Status', 'Name', 'Description', 'Type', 'Speed', 'Duplex', 'Native VLAN', 'VLANs',
+                   'PoE (mW)', 'Nodes', 'Neighbor IP', 'Neighbor Port', 'Neighbor Name', 'Last Change', 'MAC', 'MTU',
+                   'Last Comment' ] %]
+[% FOREACH config IN extra_columns %][% headers.push(config.label) %][% END %]
+[% CSV.dump(headers) %]
 
 [% FOREACH p IN ports %]
 [% SET n = p.neighbor || {} %]
 [% SET poe_mw = p.poe ? p.poe.power_mw : '' %]
 [% SET n_name = n.dns || n.id %]
-[% CSV.dump([ p.port, p.status, p.name, p.descr, p.type, p.speed, p.duplex, p.native_vlan, p.vlans.join(' '),
-              poe_mw, p.node_count, n.ip, n.port, n_name, p.last_change_at, p.mac, p.mtu ]) %]
+[% SET myport = [ p.port, p.status, p.name, p.descr, p.type, p.speed, p.duplex, p.native_vlan, p.vlans.join(' '),
+                  poe_mw, p.node_count, n.ip, n.port, n_name, p.last_change_at, p.mac, p.mtu, p.last_comment ] %]
+[% SET row = rows_by_port.${p.port} %]
+[% FOREACH config IN extra_columns %]
+  [% TRY %]
+    [% TRY %]
+      [% PROCESS "plugin/${config.name}/device_port_column_csv.tt" %]
+    [% CATCH %]
+      [% myport.push( row.get_column(config.field) ) %]
+    [% END %]
+  [% CATCH %]
+    [% myport.push('') %]
+  [% END %]
+[% END %]
+[% CSV.dump(myport) %]
 
 [% END %]

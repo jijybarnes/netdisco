@@ -754,6 +754,7 @@ xt/149-ports-modern.t
 xt/150-jobs-and-reasons.t
 xt/151-modern-shell-and-devices.t
 xt/152-devices-page-template.t
+xt/153-modern-ui-plugins.t
 xt/20-checkacl.t
 xt/21-check_acl_no_ipaddr_only.t
 xt/30-backend-workers.t

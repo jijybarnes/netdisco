@@ -41,7 +41,12 @@ my $stash = {
   user_has_role => sub { $roles{ $_[0] } },
   settings  => {
     branding_text  => 'Netdisco',
-    _navbar_items  => [ { tag => 'inventory', path => '/inventory', label => 'Inventory' } ],
+    _navbar_items  => [ { tag => 'inventory', path => '/inventory', label => 'Inventory' },
+                        { tag => 'xtphones', path => '/xtphones', label => 'Phones', icon => 'fa-phone' },
+                        { tag => 'xtbad', path => '/xtbad', label => 'Bad', icon => 'fa-x" onclick="x' },
+                        { tag => 'xtplain', path => '/xtplain', label => 'Plain' } ],
+    _additional_css => [ 'xtcss' ],
+    _additional_javascript => [ 'xtjs' ],
     _report_order  => [ 'Port', 'Node' ],
     _reports_menu  => { Port => [ 'duplexmismatch', 'hiddenone' ], Node => [] },
     _reports       => {
@@ -57,6 +62,13 @@ my $html = '';
 $tt->process('layouts/main.tt', $stash, \$html) or die $tt->error;
 
 like $html, qr/<html [^>]*data-nd-ui="modern"/, 'modernLayout__signed_in__marks_the_page_modern';
+
+# what web plugins put in the layout, as the classic one has it
+like $html, qr{href="/xtphones">\s*<i class="fas fa-phone"></i><span>Phones</span>}, 'modernLayout__plugin_navbar_item__on_the_rail_with_its_icon';
+like $html, qr{href="/xtbad">\s*<i class="fas fa-circle-dot"></i>}, 'modernLayout__plugin_icon_not_a_plain_name__the_default_icon';
+like $html, qr{href="/xtplain">\s*<i class="fas fa-circle-dot"></i><span>Plain</span>}, 'modernLayout__plugin_navbar_item_without_icon__the_default_icon';
+like $html, qr{/plugin/xtcss/xtcss\.css}, 'modernLayout__plugin_css__linked';
+like $html, qr{/plugin/xtjs/xtjs\.js}, 'modernLayout__plugin_javascript__loaded';
 like $html, qr/<body class="nd2 nd2-signed-in"/, 'modernLayout__signed_in__marks_the_body_for_the_rail_offset';
 like $html, qr/id="xt-page-content"/, 'modernLayout__signed_in__renders_the_page_content';
 
