@@ -60,7 +60,9 @@
     <i class="fas fa-server"></i><span>Devices</span></a>
   [% FOREACH ni IN settings._navbar_items %]
   <a class="nd2-rail-item[% ' active' IF nd2_nav == ni.tag %]" href="[% uri_for(ni.path) | none %]">
-    <i class="fas [% ni.tag == 'inventory' ? 'fa-boxes-stacked' : 'fa-circle-dot' %]"></i><span>[% ni.label | html_entity %]</span></a>
+    [%# a plugin's navbar item may name its rail icon (a Font Awesome name, icon) -%]
+    [% SET ni_icon = ni.icon.match('^fa-[a-z0-9-]+$') ? ni.icon : (ni.tag == 'inventory' ? 'fa-boxes-stacked' : 'fa-circle-dot') %]
+    <i class="fas [% ni_icon | html_entity %]"></i><span>[% ni.label | html_entity %]</span></a>
   [% END %]
 
   [% IF settings._reports.size %]
