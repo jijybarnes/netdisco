@@ -1,0 +1,49 @@
+[%# The modern Modules tab: the classic route's tree (sort_modules), drawn as
+    nested <details>, which open and close with no script and from the keyboard.
+    Every value still links to the Module Inventory report, as in the classic
+    tab. The first two levels open: below them a chassis is mostly ports and
+    sensors. -%]
+[% SET class_icon = { chassis => 'fa-server', module => 'fa-microchip', port => 'fa-ethernet', powerSupply => 'fa-plug',
+                      fan => 'fa-fan', sensor => 'fa-temperature-half', container => 'fa-box-open', stack => 'fa-layer-group',
+                      cpu => 'fa-microchip', backplane => 'fa-grip-lines' } %]
+[% SET inv = uri_for('/report/moduleinventory') %]
+[% BLOCK line -%]
+[% SET m = nodes.$item.module %]
+<span class="nd2-mod-line">
+  <i class="fas [% class_icon.${m.class} || 'fa-cube' %] nd2-muted" aria-hidden="true" title="[% m.class | html_entity %]"></i>
+  <a class="nd2-mod-name" href="[% inv | none %]?description=[% m.description | uri %]">[% m.description || m.name || 'Module' | html_entity %]</a>
+  [% IF m.name AND m.name != m.description %]<a class="nd2-muted" href="[% inv | none %]?name=[% m.name | uri %]">[% m.name | html_entity %]</a>[% END %]
+  [% IF m.model %]<a class="nd2-pill" title="Model" href="[% inv | none %]?model=[% m.model | uri %]">[% m.model | html_entity %]</a>[% END %]
+  [% IF m.type %]<a class="nd2-pill" title="Type" href="[% inv | none %]?type=[% m.type | uri %]">[% m.type | html_entity %]</a>[% END %]
+  [% IF m.serial %]<a class="nd2-pill nd2-mono" title="Serial number" href="[% inv | none %]?serial=[% m.serial | uri %]">[% m.serial | html_entity %]</a>[% END %]
+  [% IF m.fru %]<span class="nd2-pill nd2-pill-accent" title="Field replaceable unit">FRU</span>[% END %]
+  [% SET vers = [] %]
+  [% vers.push('hw ' _ m.hw_ver) IF m.hw_ver %][% vers.push('fw ' _ m.fw_ver) IF m.fw_ver %][% vers.push('sw ' _ m.sw_ver) IF m.sw_ver %]
+  [% IF vers.size %]<span class="nd2-mod-ver nd2-muted">[% vers.join(' · ') | html_entity %]</span>[% END %]
+</span>
+[%- END -%]
+[% BLOCK node -%]
+<li>
+  [% IF nodes.$item.children.defined %]
+  <details[% ' open' IF depth < 2 %]>
+    <summary>[% INCLUDE line %]</summary>
+    <ul>
+    [% FOREACH kidtype IN nodes.$item.children.keys.sort %]
+      [% FOREACH kid IN nodes.$item.children.$kidtype %]
+        [% INCLUDE node item = kid depth = depth + 1 IF kid %]
+      [% END %]
+    [% END %]
+    </ul>
+  </details>
+  [% ELSE %]
+  <div class="nd2-mod-leaf">[% INCLUDE line %]</div>
+  [% END %]
+</li>
+[%- END -%]
+<section class="nd2-card nd2-modules" aria-label="Modules">
+  <ul class="nd2-mod-tree">
+  [% FOREACH module IN nodes.root %]
+    [% INCLUDE node item = module depth = 0 %]
+  [% END %]
+  </ul>
+</section>

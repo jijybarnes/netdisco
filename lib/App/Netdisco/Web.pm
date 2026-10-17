@@ -152,6 +152,7 @@ use App::Netdisco::Web::Search;
 use App::Netdisco::Web::Device;
 use App::Netdisco::Web::DeviceOverview;
 use App::Netdisco::Web::DevicesPage;
+use App::Netdisco::Web::HomePage;
 use App::Netdisco::Web::Report;
 use App::Netdisco::Web::API::Objects;
 use App::Netdisco::Web::API::Queue;
