@@ -1883,3 +1883,109 @@ th:not(:has(.nd2-th)) {
   .nd2-pal-foot { display: none; }
   .nd2-pal-sub { display: none; }
 }
+
+/* ---------- device details ---------- */
+
+.nd2-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+/* a card's facts: what it is called, then what it is */
+.nd2-kvt { width: 100%; border-collapse: collapse; }
+.nd2-kvt td { padding: 7px 16px; border-top: 1px solid var(--nd2-border); vertical-align: top; overflow-wrap: anywhere; }
+.nd2-kvt tr:first-child td { border-top: 0; }
+.nd2-kvt td:first-child { width: 38%; color: var(--nd2-muted); white-space: nowrap; }
+
+/* a value that can be changed in place, as in the classic tab */
+.nd2-editable { cursor: text; border-radius: 5px; }
+.nd2-editable:hover { background: var(--nd2-surface-2); }
+.nd2-editable:focus { outline: 2px solid var(--nd2-accent); outline-offset: -2px; background: var(--nd2-surface); }
+.nd2-editable:empty::before { content: "Not set"; color: var(--nd2-muted); }
+.nd2-kvt .nd_device-details-edit { display: none; margin-left: 4px; }
+
+.nd2-layers { display: inline-flex; gap: 3px; }
+.nd2-layers span {
+  width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center;
+  font-size: 11px; color: var(--nd2-muted); background: var(--nd2-surface-2);
+}
+.nd2-layers span.nd2-on { background: var(--nd2-accent); color: #fff; font-weight: 600; }
+
+.nd2-dt-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.nd2-dt-links .badge { font-weight: 500; }
+.nd2-dt-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+/* ---------- device modules ---------- */
+
+.nd2-modules { padding: 10px 6px; }
+.nd2-mod-tree, .nd2-mod-tree ul { list-style: none; margin: 0; padding: 0; }
+.nd2-mod-tree ul { margin-left: 18px; padding-left: 12px; border-left: 1px solid var(--nd2-border); }
+.nd2-mod-tree summary, .nd2-mod-leaf { padding: 4px 8px; border-radius: 6px; }
+.nd2-mod-tree summary { cursor: pointer; list-style: none; }
+.nd2-mod-tree summary::-webkit-details-marker { display: none; }
+.nd2-mod-tree summary::before {
+  content: "\f054"; font: var(--fa-font-solid, 900 10px "Font Awesome 6 Free"); font-size: 10px;
+  display: inline-block; width: 14px; color: var(--nd2-muted); transition: transform .12s;
+}
+.nd2-mod-tree details[open] > summary::before { transform: rotate(90deg); }
+.nd2-mod-leaf { padding-left: 22px; }
+.nd2-mod-tree summary:hover, .nd2-mod-leaf:hover { background: var(--nd2-surface-2); }
+.nd2-mod-line { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.nd2-mod-name { font-weight: 500; color: inherit; }
+.nd2-mod-line a.nd2-pill { text-decoration: none; color: var(--nd2-text-2); }
+.nd2-mod-ver { font-size: 12px; }
+.nd2-pill-accent { background: var(--nd2-accent-soft); color: var(--nd2-accent-text); }
+
+/* ---------- home ---------- */
+
+.nd2-home { display: grid; gap: 18px; max-width: 1180px; margin: 0 auto; }
+.nd2-home-search { padding: 18px 0 4px; }
+.nd2-home-searchbox { position: relative; display: flex; gap: 8px; align-items: center; }
+.nd2-home-searchbox > i { position: absolute; left: 14px; color: var(--nd2-muted); pointer-events: none; }
+.nd2-home-searchbox #nqbody { flex: 1 1 auto; width: auto; min-width: 0; padding: 10px 12px 10px 38px; font-size: 16px; border-radius: 10px; margin: 0; }
+.nd2-home-searchbox .btn-group { flex: none; }
+.nd2-home-searchbox .btn { padding: 10px 14px; }
+.nd2-home-hint { margin: 8px 2px 0; font-size: 12.5px; }
+.nd2-home-hint kbd, .nd2-login kbd {
+  padding: 1px 5px; border: 1px solid var(--nd2-border-strong); border-radius: 4px;
+  background: var(--nd2-surface-2); color: var(--nd2-text-2); font-size: 11px;
+}
+
+.nd2-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.nd2-tile {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 14px;
+  background: var(--nd2-surface); border: 1px solid var(--nd2-border); border-radius: var(--nd2-radius);
+  color: inherit; text-decoration: none;
+}
+a.nd2-tile:hover { border-color: var(--nd2-accent); }
+.nd2-tile small { color: var(--nd2-muted); font-size: 12px; }
+.nd2-tile b { font-size: 26px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.nd2-tile span { font-size: 12px; }
+.nd2-tile-bad { box-shadow: inset 3px 0 0 var(--nd2-critical); }
+.nd2-tile-bad b { color: var(--nd2-critical); }
+.nd2-tile-warn { box-shadow: inset 3px 0 0 var(--nd2-warning); }
+
+.nd2-home-cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.nd2-recent { list-style: none; margin: 0; padding: 0; }
+.nd2-recent li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--nd2-border); }
+.nd2-recent li:first-child { border-top: 0; }
+.nd2-recent a { color: inherit; text-decoration: none; font-weight: 500; }
+.nd2-recent a:hover { color: var(--nd2-accent); }
+.nd2-home-discover { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nd2-home-discover #discodevs { flex: 1 1 320px; margin: 0; width: auto; }
+
+.nd2-login { max-width: 420px; margin: 9vh auto 0; display: grid; gap: 12px; }
+.nd2-login-card { padding: 26px 28px; }
+.nd2-login-card h1 { font-size: 22px; margin: 0 0 4px; }
+.nd2-login-form { display: grid; gap: 6px; margin-top: 18px; }
+.nd2-login-form label { font-weight: 500; margin-top: 6px; }
+.nd2-login-form .form-control { margin: 0; }
+.nd2-login-form .btn { margin-top: 12px; }
+.nd2-login-logo { max-height: 48px; margin-bottom: 12px; }
+
+@media (max-width: 760px) {
+  .nd2-home-cols { grid-template-columns: 1fr; }
+  .nd2-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
