@@ -8,6 +8,7 @@
 
 import { createDrawer } from './drawer.js';
 import { affectsDevice } from './jobs-core.js';
+import { el } from './dom.js';
 
 export const STATUS_LABEL = {
   up: 'Up', down: 'Down', disabled: 'Disabled', blocking: 'STP blocking', errdisabled: 'Err-disabled',
@@ -32,6 +33,14 @@ export function isPhysical(p) {
 
 const UPLINK_PREFIX = /^(?:te|tw|twe|fo|fortygig|hu|hundredgig|xe|et-|tengig|twentyfive)/i;
 
+// What is written on a port of the panel: its number, which on a fixed switch
+// is what is printed beside the socket. A group of one has no number to speak
+// of (Management0), so it also carries the first letter of its name.
+export function portLabel(key, n, groupSize) {
+  if (groupSize === 1 && /[A-Za-z]/.test(key)) return `${key.replace(/[^A-Za-z]/g, '')[0].toUpperCase()}${n}`;
+  return String(n);
+}
+
 export function faceplateLayout(ports) {
   const units = new Map();
   ports.forEach((p) => {
@@ -47,7 +56,7 @@ export function faceplateLayout(ports) {
     const banks = [];
     for (let i = 0; i < list.length; i += size) banks.push(list.slice(i, i + size));
     const uplink = UPLINK_PREFIX.test(key) || list.every(({ port }) => (port.speed_bps || 0) >= 1e10);
-    return { key, uplink, banks };
+    return { key, uplink, size: list.length, banks };
   });
 }
 
@@ -162,7 +171,13 @@ const dash = (parts) => (parts.length ? parts : [{ text: '—', cls: 'nd2-muted'
 const st = (p) => [{ status: p.status, text: STATUS_LABEL[p.status] || p.status }];
 
 export const COLUMNS = {
-  c_port: { cells: (p) => [{ status: p.status, title: STATUS_LABEL[p.status] }, { text: p.port, cls: 'nd2-mono nd2-strong' }], sort: (p, i) => i },
+  // the port's own state is drawn beside its name unless the Status column says it
+  c_port: {
+    cells: (p, shown) => (shown && shown.has('c_up')
+      ? [{ text: p.port, cls: 'nd2-mono nd2-strong' }]
+      : [{ status: p.status, title: STATUS_LABEL[p.status] }, { text: p.port, cls: 'nd2-mono nd2-strong' }]),
+    sort: (p, i) => i,
+  },
   c_up: { cells: st, sort: (p) => STATUS_ORDER[p.status] },
   c_name: { cells: (p) => dash(txt(p.name)), sort: (p) => (p.name || '').toLowerCase() },
   c_descr: { cells: (p) => dash(txt(p.descr)), sort: (p) => (p.descr || '').toLowerCase() },
@@ -200,8 +215,16 @@ export const COLUMNS = {
     sort: (p) => (p.poe ? p.poe.power_mw || 0 : null), num: true,
   },
   c_nodes: {
-    cells: (p) => (p.node_count ? [{ text: p.node_count === 1 ? '1 node' : `${p.node_count} nodes` }] : dash([])),
-    sort: (p) => p.node_count || 0, num: true,
+    // the node seen last, by its address when it has one, and how many more
+    cells: (p) => {
+      const n = p.last_node;
+      if (!n) return p.node_count ? [{ text: p.node_count === 1 ? '1 node' : `${p.node_count} nodes` }] : dash([]);
+      const parts = [{ text: n.mac, cls: 'nd2-mono', title: [n.vendor, n.dns].filter(Boolean).join(' · ') || undefined }];
+      if (n.ip) parts.push({ text: n.ip, cls: 'nd2-mono nd2-muted' });
+      if (p.node_count > 1) parts.push({ text: `+${p.node_count - 1}`, cls: 'nd2-pill', title: `${p.node_count} nodes on this port` });
+      return parts;
+    },
+    sort: (p) => p.node_count || 0,
   },
   c_neighbors: {
     cells: (p) => {
@@ -223,13 +246,39 @@ export const COLUMNS = {
 
 // The columns the server offers (settings.port_columns, in its order, with the
 // site's labels and defaults) that this tab can draw. Port is always shown.
+// The order and the names this tab gives its columns. The classic tab's sidebar
+// lists them in the order and under the names that suit a column of checkboxes
+// (Up/Down Status last, Speed (running)); a table reads better with the state
+// next to the port and shorter headings. A column not named here keeps the
+// site's label and goes after these, in the site's order.
+export const COLUMN_ORDER = ['c_port', 'c_up', 'c_name', 'c_descr', 'c_speed', 'c_speed_admin', 'c_duplex', 'c_duplex_admin',
+  'c_pvid', 'c_vmember', 'c_power', 'c_nodes', 'c_neighbors', 'c_stp', 'c_lastchange'];
+
+export const COLUMN_LABEL = {
+  c_up: 'Status', c_name: 'Name', c_descr: 'Description', c_speed: 'Speed', c_speed_admin: 'Speed (set)',
+  c_duplex: 'Duplex', c_duplex_admin: 'Duplex (set)', c_pvid: 'Native VLAN', c_vmember: 'VLAN membership',
+  c_power: 'PoE', c_nodes: 'Connected nodes', c_neighbors: 'Connected device', c_stp: 'Spanning tree', c_lastchange: 'Last change',
+};
+
 export function usableColumns(offered) {
-  return (offered || []).filter((c) => COLUMNS[c.name]);
+  const rank = (name) => { const i = COLUMN_ORDER.indexOf(name); return i < 0 ? COLUMN_ORDER.length : i; };
+  return (offered || [])
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => COLUMNS[c.name])
+    .sort((a, b) => rank(a.c.name) - rank(b.c.name) || a.i - b.i)
+    .map(({ c }) => ({ ...c, label: COLUMN_LABEL[c.name] || c.label }));
 }
+
+// What the tab shows before a browser has chosen otherwise. The site's own
+// port_columns defaults are for the classic tab's sidebar and do not carry over:
+// they are a short list made for a table with no room (name, VLANs, neighbors),
+// where this tab has the width for the state, speed, PoE and what is connected.
+// The site's order and labels are kept.
+export const DEFAULT_COLUMNS = new Set(['c_port', 'c_up', 'c_name', 'c_speed', 'c_pvid', 'c_vmember', 'c_power', 'c_nodes', 'c_neighbors']);
 
 export function visibleColumns(offered, prefs) {
   return usableColumns(offered).filter((c) => c.name === 'c_port'
-    || (prefs && Object.prototype.hasOwnProperty.call(prefs, c.name) ? prefs[c.name] : c.default));
+    || (prefs && Object.prototype.hasOwnProperty.call(prefs, c.name) ? prefs[c.name] : DEFAULT_COLUMNS.has(c.name)));
 }
 
 // ---------- preferences ----------
@@ -251,17 +300,6 @@ export function savePrefs(storage, prefs) {
 
 // ---------- DOM ----------
 
-function el(doc, tag, attrs = {}, children = []) {
-  const e = doc.createElement(tag);
-  Object.entries(attrs).forEach(([k, v]) => {
-    if (v == null || v === false) return;
-    if (k === 'class') e.className = Array.isArray(v) ? v.filter(Boolean).join(' ') : v;
-    else if (k === 'text') e.textContent = v;
-    else e.setAttribute(k, v === true ? '' : String(v));
-  });
-  children.forEach((c) => c && e.appendChild(c));
-  return e;
-}
 
 function renderPart(doc, part, uriBase) {
   if (part.time) {
@@ -279,11 +317,23 @@ function renderPart(doc, part, uriBase) {
   return el(doc, 'span', { class: part.cls, title: part.title }, [label]);
 }
 
+// The count on the tab is what the device reported; once the tab has its ports
+// it says how many it shows, which hidden ports can make fewer.
+export function setTabCount(doc, count) {
+  const link = doc.getElementById('ports_link');
+  if (!link) return;
+  let badge = link.querySelector('.nd2-n');
+  if (!count) { if (badge) badge.remove(); return; }
+  if (!badge) { badge = doc.createElement('span'); badge.className = 'nd2-n'; link.appendChild(badge); }
+  badge.textContent = String(count);
+}
+
 export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win = window }) {
   const doc = root.ownerDocument;
   const offered = JSON.parse(root.getAttribute('data-nd2-columns') || '[]');
   const reasons = JSON.parse(root.getAttribute('data-nd2-reasons') || '[]');
   const device = root.getAttribute('data-nd2-device');
+  const model = (root.getAttribute('data-nd2-model') || '').slice(0, 16);
   const drawer = createDrawer({
     doc, win, fetchJson, post, toast, uriBase, reasons, device,
     apiBase: root.getAttribute('data-nd2-api'),
@@ -332,6 +382,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     const filtering = state.q || state.chips.size;
     panel.replaceChildren();
     const units = faceplateLayout(state.ports);
+    if (model && units.length) panel.appendChild(el(doc, 'span', { class: 'nd2-unit', text: model, 'aria-hidden': 'true' }));
     if (!units.length) {
       panel.appendChild(el(doc, 'p', { class: 'nd2-muted', text: 'No physical ports to draw.' }));
     }
@@ -340,6 +391,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
         const b = el(doc, 'div', { class: ['nd2-bank', u.uplink && 'nd2-bank-uplink'], role: 'group', 'aria-label': u.key });
         bank.forEach(({ n, port: p }) => {
           const look = portLook(p, state.mode, state.slots);
+          const label0 = portLabel(u.key, n, u.size);
           const label = `${p.port}, ${STATUS_LABEL[p.status] || p.status}`
             + (p.name ? `, ${p.name}` : '') + (p.native_vlan != null ? `, VLAN ${p.native_vlan}` : '')
             + (p.poe && p.poe.power_mw ? `, ${(p.poe.power_mw / 1000).toFixed(1)} W` : '')
@@ -347,7 +399,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
           const btn = el(doc, 'button', {
             type: 'button', class: ['nd2-p', ...look.cls, filtering && !shown.has(p.port) && 'nd2-dim', state.selected === p.port && 'nd2-sel'],
             'data-nd2-port': p.port, title: label, 'aria-label': label,
-            text: look.text != null && look.text !== '' ? look.text : String(n),
+            text: look.text != null && look.text !== '' ? look.text : label0,
           });
           if (state.mode === 'status' && p.poe && p.poe.power_mw) btn.appendChild(el(doc, 'span', { class: 'nd2-bolt', 'aria-hidden': 'true', text: '⚡' }));
           btn.addEventListener('click', () => select(p.port, 'panel', btn));
@@ -368,6 +420,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
 
   function drawTable() {
     const cols = visibleColumns(offered, prefs.columns);
+    const shown = new Set(cols.map((c) => c.name));
     const thead = el(doc, 'thead', {}, [el(doc, 'tr', {}, cols.map((c) => {
       const sorted = state.sort === c.name;
       const th = el(doc, 'th', {
@@ -386,7 +439,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     const tbody = el(doc, 'tbody', {}, rows.map((p) => {
       const tr = el(doc, 'tr', { 'data-nd2-port': p.port, tabindex: '0', class: state.selected === p.port && 'nd2-sel' },
         cols.map((c) => el(doc, 'td', { class: COLUMNS[c.name].num && 'nd2-num', 'data-label': c.label, 'data-col': c.name },
-          COLUMNS[c.name].cells(p).map((part) => renderPart(doc, part, uriBase)))));
+          COLUMNS[c.name].cells(p, shown).map((part) => renderPart(doc, part, uriBase)))));
       tr.addEventListener('click', (e) => { if (!e.target.closest('a')) select(p.port, 'table', tr); });
       // a row is a control: reachable by Tab, opened by Enter or Space
       tr.addEventListener('keydown', (e) => {
@@ -415,6 +468,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
       state.ports = body.data || [];
       state.slots = vlanSlots(state.ports);
       refilter();
+      setTabCount(doc, state.ports.length);
       if (drawer.isOpen()) {
         const open = state.ports.find((x) => x.port === drawer.current());
         if (open) drawer.update(open); else drawer.close();
@@ -437,6 +491,15 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
   win.addEventListener('nd2:jobs-finished', (e) => {
     if (!root.isConnected) return;
     if (e.detail.jobs.some((j) => affectsDevice(j, device))) load();
+  });
+
+  // F goes to the filter, from anywhere that is not a field already
+  doc.addEventListener('keydown', (e) => {
+    if (!root.isConnected || e.key.toLowerCase() !== 'f' || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test((doc.activeElement || {}).tagName || '')) return;
+    e.preventDefault();
+    search.focus();
+    search.select();
   });
 
   // ---- controls ----

@@ -93,6 +93,23 @@ subtest 'jobsRoute__both_addresses__are_routed_and_documented' => sub {
     ['limit'], 'with its limit parameter';
 };
 
+subtest 'devicesListRoute__both_addresses__are_routed_and_documented' => sub {
+  route_exists [ GET => '/api/v2/devices' ], 'GET /api/v2/devices';
+  { local $ENV{HTTP_X_REQUESTED_WITH} = 'XMLHttpRequest';
+    route_exists [ GET => '/ajax/data/v2/devices' ], 'GET /ajax/data/v2/devices'; }
+  my $get = Dancer::Plugin::Swagger->instance->doc->{paths}{'/api/v2/devices'}{get};
+  ok $get, 'documented';
+  is_deeply [ map { $_->{name} } grep { ref {} eq ref $_ } @{ $get->{parameters} } ],
+    [qw/q health sort dir limit offset/], 'with every parameter it reads';
+};
+
+subtest 'devicesPage__is_routed' => sub {
+  # Rendering a whole page reads the ACL names from the database in a hook that
+  # runs for every page request, which a test cannot have (xt/36), so the page
+  # is checked here by its route and in xt/152 by its template.
+  route_exists [ GET => '/devices' ], 'GET /devices';
+};
+
 subtest 'deviceRoutes__both_addresses__are_routed' => sub {
   foreach my $path ('/devices/10.0.0.1', '/devices/10.0.0.1/ports',
                     '/devices/10.0.0.1/ports/Gi1/0/1', '/devices/10.0.0.1/ports/Gi1/0/1/nodes') {

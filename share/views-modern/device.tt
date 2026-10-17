@@ -10,6 +10,11 @@
     <h1>
       [% display_name | html_entity %]
       [% IF netdisco_device.is_pseudo %]<span class="nd2-pill nd2-pill-warning">Pseudo device</span>[% END %]
+      [% IF d.health.state == 'failing' %]
+      <span class="nd2-st nd2-st-errdisabled nd2-health" title="The backend could not reach this device [% d.health.deferrals | html_entity %] times in a row[% IF d.health.last_failure_at %], the last on [% d.health.last_failure_at | html_entity %][% END %]. See Admin, SNMP Connect Failures."><i aria-hidden="true"></i>Unreachable</span>
+      [% ELSE %]
+      <span class="nd2-st nd2-st-up nd2-health" title="No connection failure is recorded for this device"><i aria-hidden="true"></i>Reachable</span>
+      [% END %]
     </h1>
     <div class="nd2-dev-meta">
       <span class="nd2-mono">[% d.ip | html_entity %]</span>
@@ -78,10 +83,13 @@
   </div>
 
   <div class="content">
+    [%# how many each tab lists; the Neighbors tab is the netmap, whose tag is netmap -%]
+    [% SET counts = { ports => d.counts.ports, addresses => d.counts.addresses, vlans => d.counts.vlans,
+                      modules => d.counts.modules, netmap => d.counts.neighbors } %]
     <ul id="nd_search-results" class="nav nav-tabs nd2-tabs">
       [% FOREACH tab IN settings._device_tabs %]
       [% NEXT UNLESS tab.render_if %]
-      <li class="nav-item"><a class="nav-link[% ' active' IF params.tab == tab.tag %]" id="[% tab.tag | html_entity %]_link" href="#[% tab.tag | html_entity %]_pane">[% tab.label | html_entity %]</a></li>
+      <li class="nav-item"><a class="nav-link[% ' active' IF params.tab == tab.tag %]" id="[% tab.tag | html_entity %]_link" href="#[% tab.tag | html_entity %]_pane">[% tab.label | html_entity %][% IF counts.${tab.tag} %]<span class="nd2-n">[% counts.${tab.tag} | html_entity %]</span>[% END %]</a></li>
       [% END %]
       <span id="nd_device-name">
         <a id="nd_csv-download" href="#" download="netdisco.csv">

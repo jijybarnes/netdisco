@@ -9,6 +9,7 @@
 
 import { relativeTime } from './time.js';
 import { STATE_LABEL, isActive, describeJob } from './jobs-core.js';
+import { el } from './dom.js';
 
 export const STATUS_LABEL = {
   up: 'Up', down: 'Down', disabled: 'Disabled', blocking: 'STP blocking', errdisabled: 'Err-disabled',
@@ -125,17 +126,6 @@ export function pendingForPort(jobs, device, port) {
 
 // ---------- the drawer ----------
 
-function el(doc, tag, attrs = {}, children = []) {
-  const e = doc.createElement(tag);
-  Object.entries(attrs).forEach(([k, v]) => {
-    if (v == null || v === false) return;
-    if (k === 'class') e.className = Array.isArray(v) ? v.filter(Boolean).join(' ') : v;
-    else if (k === 'text') e.textContent = v;
-    else e.setAttribute(k, v === true ? '' : String(v));
-  });
-  children.forEach((c) => c && e.append(c));
-  return e;
-}
 
 function section(doc, title, ...children) {
   return el(doc, 'section', { class: 'nd2-dr-sec' }, [el(doc, 'h4', { text: title }), ...children]);

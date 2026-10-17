@@ -154,6 +154,34 @@ jobs:
       - name: Jobs are described, followed, and reported finished once
         run: node --test xt/js/modern-jobs.test.js
 
+  modern-devices:
+    name: modern Devices page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # Same naming rule as the jobs above: name the file, never a glob.
+      - name: The list's address, order and cells
+        run: node --test xt/js/modern-devices.test.js
+
+  modern-theme:
+    name: modern theme choice
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # Same naming rule as the jobs above: name the file, never a glob.
+      - name: A browser's theme is in force before first paint, against the real resolver
+        run: node --test xt/js/modern-theme.test.js
+
   no-jstree:
     name: the SNMP tree is server rendered
     runs-on: ubuntu-latest

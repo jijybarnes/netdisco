@@ -10,6 +10,7 @@ use App::Netdisco::Web::Data qw/register_data_route/;
 use App::Netdisco::Web::Data::Device qw/find_device device_summary/;
 use App::Netdisco::Web::Data::Ports qw/device_ports device_port port_nodes/;
 use App::Netdisco::Web::Data::Jobs 'my_jobs';
+use App::Netdisco::Web::Data::Devices 'list_devices';
 use App::Netdisco::Util::Port qw/port_acl_service port_acl_pvid port_acl_name
                                  device_acl_by_role_check sync_portctl_roles/;
 
@@ -68,6 +69,29 @@ my %PORT = (
   description => 'Name of the port, as listed by .../ports. It may contain slashes; URL-encode any other reserved character.',
   required => 1,
   in => 'path',
+);
+
+register_data_route(
+  pattern  => '/devices',
+  doc_path => '/devices',
+  doc => {
+    description => 'The devices, as light rows: searched, ordered and cut to a page in the database',
+    parameters  => [
+      q      => { description => 'Words that must all appear in the device: its names, address, model, vendor, software, location, serial or description', in => 'query', type => 'string' },
+      health => { description => 'failing: only the devices the backend cannot reach', in => 'query', type => 'string', enum => ['failing'] },
+      sort   => { description => 'Order by', in => 'query', type => 'string', enum => [qw/name ip model os location ports last_discover/], default => 'name' },
+      dir    => { description => 'asc or desc', in => 'query', type => 'string', enum => [qw/asc desc/], default => 'asc' },
+      limit  => { description => 'How many rows, at most 1000', in => 'query', type => 'integer', default => 100 },
+      offset => { description => 'How many rows to skip', in => 'query', type => 'integer', default => 0 },
+    ],
+    responses => { default => {} },
+  },
+  code => sub {
+    my $r = list_devices(_schema,
+      map { $_ => scalar param($_) } qw/q health sort dir limit offset/);
+    return { data => $r->{rows}, meta => {
+      count => scalar @{ $r->{rows} }, total => $r->{total}, failing => $r->{failing} } };
+  },
 );
 
 register_data_route(

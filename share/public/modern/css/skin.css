@@ -1,0 +1,693 @@
+/* Skin: the classic pages' markup, in the modern interface's design.
+
+   modern.css is the shell and the pieces written for the modern interface.
+   This file is what makes everything that is not yet written for it (the
+   Details tab, the DataTables panes, the search and report sidebars, the admin
+   pages) look like it belongs, so a page is never half one design and half
+   the other while it waits its turn.
+
+   Two means, in this order. First the classic stylesheet's own variables
+   (--nd-*, and Bootstrap's --bs-*) are given modern values, so the rules that
+   read them follow without being touched. Then what no variable reaches is
+   restyled, under :root[data-nd-ui="modern"], which out-ranks the classic rules
+   that are scoped to the color mode (:is(:root:not([data-bs-theme]), ...)).
+
+   Everything is scoped to the modern interface, so linking this file from the
+   classic layout by mistake would change nothing. */
+
+/* ---------- classic variables, in modern colors ---------- */
+
+:root[data-nd-ui="modern"] {
+  --bs-secondary-bg: var(--nd2-surface-2);
+  --bs-tertiary-bg: var(--nd2-surface-2);
+  --bs-body-bg-rgb: 246, 247, 249;
+  --bs-border-color-translucent: var(--nd2-border);
+  --bs-secondary-color: var(--nd2-muted);
+  --bs-tertiary-color: var(--nd2-muted);
+  --bs-emphasis-color: var(--nd2-text);
+
+  --nd-table-head-bg: var(--nd2-surface-2);
+  --nd-secondary-bg: var(--nd2-surface-2);
+  --nd-heading-bg: var(--nd2-surface-2);
+  --nd-sidebar-bg: var(--nd2-surface);
+  --nd-sidebar-border: var(--nd2-border);
+  --nd-sidebar-icon: var(--nd2-muted);
+  --nd-control-border: var(--nd2-border-strong);
+  --nd-single-tab: var(--nd2-text);
+  --nd-device-name: var(--nd2-text);
+  --nd-inventory-head: var(--nd2-text);
+  --nd-group-row-bg: var(--nd2-surface-2);
+  --nd-light-link: var(--nd2-accent-text);
+  --nd-light-row-link: var(--nd2-accent-text);
+  --nd-stealth-link: var(--nd2-text);
+  --nd-link-button-color: var(--nd2-accent-text);
+}
+
+:root[data-nd-ui="modern"][data-bs-theme="dark"] {
+  --bs-body-bg-rgb: 15, 17, 21;
+}
+
+/* ---------- type ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main {
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+/* netdisco.css sizes every heading for its own pages, 36px lines and all */
+:root[data-nd-ui="modern"] .nd2-main :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0 0 8px;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -.005em;
+}
+
+:root[data-nd-ui="modern"] .nd2-main h1 { font-size: 20px; }
+:root[data-nd-ui="modern"] .nd2-main h2 { font-size: 17px; }
+:root[data-nd-ui="modern"] .nd2-main h3 { font-size: 15px; }
+:root[data-nd-ui="modern"] .nd2-main :is(h4, h5, h6) { font-size: 13.5px; }
+
+/* a card's heading is the card's, and sits in its own bar (modern.css) */
+:root[data-nd-ui="modern"] .nd2-main .nd2-card > h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+:root[data-nd-ui="modern"] .nd2-main a {
+  text-decoration: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main a:hover {
+  text-decoration: underline;
+}
+
+:root[data-nd-ui="modern"] .nd2-main :is(.btn, .nav-link, .page-link, .dropdown-item):hover {
+  text-decoration: none;
+}
+
+/* ---------- tabs ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main .nav-tabs {
+  gap: 2px;
+  margin-bottom: 14px;
+  align-items: center;
+  border-bottom: 1px solid var(--nd2-border);
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nav-tabs > li {
+  margin-bottom: -1px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nav-tabs .nav-link {
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--nd2-muted);
+  font-weight: 500;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nav-tabs .nav-link:hover {
+  color: var(--nd2-text);
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nav-tabs .nav-link.active {
+  color: var(--nd2-text);
+  border-bottom-color: var(--nd2-accent);
+}
+
+/* The CSV link, in the corner of the tab row: a button, with its name. The
+   icon inside is still the element the page swaps its tip into. */
+:root[data-nd-ui="modern"] .nd2-main #nd_device-name {
+  margin-left: auto;
+  padding: 0;
+  font-weight: 400;
+}
+
+:root[data-nd-ui="modern"] .nd2-main #nd_csv-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--nd2-border-strong);
+  border-radius: 7px;
+  background: var(--nd2-surface);
+  color: var(--nd2-text-2);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main #nd_csv-download:hover {
+  background: var(--nd2-surface-2);
+  text-decoration: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main #nd_csv-download::after {
+  content: "CSV";
+}
+
+:root[data-nd-ui="modern"] .nd2-main #nd_csv-download-icon {
+  order: -1;
+  color: var(--nd2-muted) !important;
+  font-size: 14px;
+}
+
+/* ---------- tables ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main table.table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: transparent;
+  --bs-table-striped-color: var(--nd2-text);
+  --bs-table-hover-bg: var(--nd2-surface-2);
+  --bs-table-border-color: var(--nd2-border);
+  --bs-table-color: var(--nd2-text);
+  width: 100%;
+  margin: 0 0 12px;
+  border: 1px solid var(--nd2-border);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--nd2-radius);
+  background: var(--nd2-surface);
+  font-size: 13px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main table.table > :not(caption) > * > * {
+  padding: 7px 12px;
+  border-width: 0 0 1px;
+  border-style: solid;
+  border-color: var(--nd2-border);
+  background: transparent;
+  box-shadow: none;
+  color: var(--nd2-text);
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* the border above each row that netdisco.css restores for the old look */
+:root[data-nd-ui="modern"] .nd2-main table.table > tbody > tr > * {
+  border-top-width: 0;
+  border-bottom-width: 1px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main table.table > tbody > tr:last-child > * {
+  border-bottom-width: 0;
+}
+
+:root[data-nd-ui="modern"] .nd2-main table.table > thead > tr > * {
+  background: var(--nd2-surface-2);
+  color: var(--nd2-text-2);
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom-width: 1px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main table.table > thead > tr:first-child > *:first-child { border-top-left-radius: calc(var(--nd2-radius) - 1px); }
+:root[data-nd-ui="modern"] .nd2-main table.table > thead > tr:first-child > *:last-child { border-top-right-radius: calc(var(--nd2-radius) - 1px); }
+:root[data-nd-ui="modern"] .nd2-main table.table > tbody > tr:last-child > *:first-child { border-bottom-left-radius: calc(var(--nd2-radius) - 1px); }
+:root[data-nd-ui="modern"] .nd2-main table.table > tbody > tr:last-child > *:last-child { border-bottom-right-radius: calc(var(--nd2-radius) - 1px); }
+
+:root[data-nd-ui="modern"] .nd2-main table.table > tbody > tr:hover > * {
+  background: var(--nd2-surface-2);
+}
+
+/* a table of facts: what it is called, then what it is */
+:root[data-nd-ui="modern"] .nd2-main #details_pane table.table > tbody > tr > td:first-child {
+  width: 190px;
+  color: var(--nd2-muted);
+}
+
+/* numbers sit at the right of their column, with the digits lined up */
+:root[data-nd-ui="modern"] .nd2-main div.dt-container table.dataTable :is(th, td).dt-type-numeric,
+:root[data-nd-ui="modern"] .nd2-main div.dt-container table.dataTable :is(th, td).dt-type-date {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* netdisco centers some cells, for the old look; the data reads from the left */
+:root[data-nd-ui="modern"] .nd2-main div.dt-container table.dataTable :is(th, td).nd_center-cell,
+:root[data-nd-ui="modern"] .nd2-main div.dt-container table.dataTable :is(th, td).nd_center-middle-cell,
+:root[data-nd-ui="modern"] .nd2-main .table .nd_center-cell,
+:root[data-nd-ui="modern"] .nd2-main .table .nd_center-middle-cell {
+  text-align: left;
+}
+
+/* ---------- DataTables controls ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container {
+  display: flex;
+  flex-direction: column;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container > .top {
+  order: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 10px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container > :is(table, .dt-processing, .table-responsive) { order: 2; }
+
+/* the count goes under the table, where the prototype keeps it */
+:root[data-nd-ui="modern"] .nd2-main div.dt-container > .dt-info {
+  order: 3;
+  padding: 2px 2px 0;
+  color: var(--nd2-muted);
+  font-size: 12.5px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container > .bottom { order: 4; }
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-length,
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-search,
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.nd_datatables-pager {
+  float: none;
+  margin: 0;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-length label {
+  float: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--nd2-text-2);
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-search {
+  display: flex;
+  margin-left: auto;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-search input {
+  min-width: 220px;
+}
+
+/* the pager: a row of small buttons, the current one in the accent */
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.nd_datatables-pager div.dt-paging ul.pagination {
+  --bs-pagination-padding-y: 4px;
+  --bs-pagination-padding-x: 11px;
+  --bs-pagination-font-size: 13px;
+  --bs-pagination-color: var(--nd2-text-2);
+  --bs-pagination-bg: var(--nd2-surface);
+  --bs-pagination-border-color: var(--nd2-border-strong);
+  --bs-pagination-border-radius: 7px;
+  --bs-pagination-hover-color: var(--nd2-text);
+  --bs-pagination-hover-bg: var(--nd2-surface-2);
+  --bs-pagination-hover-border-color: var(--nd2-border-strong);
+  --bs-pagination-active-bg: var(--nd2-accent);
+  --bs-pagination-active-border-color: var(--nd2-accent);
+  --bs-pagination-active-color: #fff;
+  --bs-pagination-disabled-bg: var(--nd2-surface);
+  --bs-pagination-disabled-color: var(--nd2-muted);
+  --bs-pagination-disabled-border-color: var(--nd2-border);
+  gap: 3px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container .page-item .page-link {
+  border-radius: 7px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-processing {
+  border: 1px solid var(--nd2-border);
+  border-radius: var(--nd2-radius);
+  background: var(--nd2-surface);
+  color: var(--nd2-text-2);
+}
+
+/* ---------- forms ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main :is(.form-control, .form-select) {
+  border: 1px solid var(--nd2-border-strong);
+  border-radius: 7px;
+  background-color: var(--nd2-surface);
+  color: var(--nd2-text);
+  font-size: 13px;
+  box-shadow: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main :is(.form-control, .form-select):focus {
+  border-color: var(--nd2-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nd2-accent) 25%, transparent);
+  outline: 0;
+}
+
+:root[data-nd-ui="modern"] .nd2-main :is(.form-control, .form-select)::placeholder {
+  color: var(--nd2-muted);
+}
+
+:root[data-nd-ui="modern"] .nd2-main :is(.form-control-sm, .form-select-sm) {
+  padding: 4px 9px;
+  min-height: 0;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .form-check-input:checked {
+  background-color: var(--nd2-accent);
+  border-color: var(--nd2-accent);
+}
+
+:root[data-nd-ui="modern"] .nd2-main .form-check-input {
+  border-color: var(--nd2-border-strong);
+}
+
+/* ---------- buttons ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main .btn:not(.toggle, .toggle *) {
+  --bs-btn-border-radius: 7px;
+  --bs-btn-font-size: 13px;
+  --bs-btn-font-weight: 500;
+  --bs-btn-padding-y: 5px;
+  --bs-btn-padding-x: 11px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .btn-sm:not(.toggle, .toggle *) {
+  --bs-btn-padding-y: 3px;
+  --bs-btn-padding-x: 9px;
+  --bs-btn-font-size: 12.5px;
+}
+
+/* The classic pages' main action is a cyan "info" button. Here the main action
+   is the accent. */
+:root[data-nd-ui="modern"] .nd2-main .btn-info {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--nd2-accent);
+  --bs-btn-border-color: var(--nd2-accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: color-mix(in srgb, var(--nd2-accent) 86%, #000);
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--nd2-accent) 86%, #000);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: color-mix(in srgb, var(--nd2-accent) 78%, #000);
+  --bs-btn-active-border-color: color-mix(in srgb, var(--nd2-accent) 78%, #000);
+  color: #fff;
+  background-color: var(--nd2-accent);
+  border-color: var(--nd2-accent);
+  background-image: none;
+  text-shadow: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .btn-info:hover {
+  background-color: color-mix(in srgb, var(--nd2-accent) 86%, #000);
+  border-color: color-mix(in srgb, var(--nd2-accent) 86%, #000);
+}
+
+/* a cell of buttons in a table is quieter than a form's submit */
+:root[data-nd-ui="modern"] .nd2-main table .btn-info {
+  --bs-btn-color: var(--nd2-accent-text);
+  --bs-btn-bg: var(--nd2-accent-soft);
+  --bs-btn-border-color: transparent;
+  color: var(--nd2-accent-text);
+  background-color: var(--nd2-accent-soft);
+  border-color: transparent;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .btn-secondary:not(.toggle, .toggle *) {
+  --bs-btn-color: var(--nd2-text-2);
+  --bs-btn-bg: var(--nd2-surface);
+  --bs-btn-border-color: var(--nd2-border-strong);
+  --bs-btn-hover-color: var(--nd2-text);
+  --bs-btn-hover-bg: var(--nd2-surface-2);
+  --bs-btn-hover-border-color: var(--nd2-border-strong);
+}
+
+:root[data-nd-ui="modern"] .nd2-main .btn-link {
+  --bs-btn-color: var(--nd2-accent-text);
+}
+
+/* ---------- alerts and notices ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main .alert {
+  --bs-alert-padding-y: 10px;
+  --bs-alert-padding-x: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--nd2-border);
+  border-radius: var(--nd2-radius);
+  background: var(--nd2-surface);
+  color: var(--nd2-text-2);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .alert.alert-danger {
+  border-color: color-mix(in srgb, var(--nd2-critical) 45%, transparent);
+  background: color-mix(in srgb, var(--nd2-critical) 9%, var(--nd2-surface));
+  color: var(--nd2-text);
+}
+
+:root[data-nd-ui="modern"] .nd2-main .alert.alert-warning {
+  border-color: color-mix(in srgb, var(--nd2-warning) 55%, transparent);
+  background: color-mix(in srgb, var(--nd2-warning) 12%, var(--nd2-surface));
+  color: var(--nd2-text);
+}
+
+/* "Waiting for results", which each pane shows while it loads */
+:root[data-nd-ui="modern"] .nd2-main .htmx-indicator.alert {
+  display: inline-block;
+  width: auto;
+  padding: 6px 12px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--nd2-muted);
+}
+
+/* ---------- badges ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main .badge {
+  padding: 2px 8px;
+  border: 1px solid var(--nd2-border);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 500;
+  text-shadow: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .badge:is(.text-bg-info, .text-bg-dark, .text-bg-secondary, .text-bg-light) {
+  background-color: var(--nd2-surface-2) !important;
+  color: var(--nd2-text-2) !important;
+}
+
+/* ---------- the sidebar of filters ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main .container-fluid > .nd_sidebar > .card {
+  border: 1px solid var(--nd2-border);
+  border-radius: var(--nd2-radius);
+  background: var(--nd2-surface);
+  box-shadow: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .container-fluid > .nd_sidebar > .card > .card-body {
+  padding: 16px 16px 14px;
+}
+
+/* A section's name, small and quiet, as the drawer does; not the old italic */
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar-title {
+  margin: 4px 0 10px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar-title em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--nd2-muted);
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar-form label {
+  color: var(--nd2-text-2);
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar-form :is(h1, h2, h3, h4, h5, h6, em, i.nd_sidebar-heading) {
+  font-style: normal;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar-form a:not(.btn) {
+  color: var(--nd2-accent-text);
+  font-weight: 500;
+}
+
+/* a sidebar's actions span it; not the parts of an on/off switch, which are
+   buttons too and size themselves */
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar-form .btn:not(.toggle, .toggle *) {
+  width: 100%;
+  justify-content: center;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar-form .input-group .btn {
+  width: auto;
+}
+
+/* ---------- the inventory page ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main .nd_inventory-table-head {
+  margin: 4px 0 10px;
+  color: var(--nd2-text);
+  font-size: 15px;
+  text-align: left;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .container > .row {
+  margin-top: 6px;
+}
+
+/* ---------- modals, dropdowns, tooltips ---------- */
+
+:root[data-nd-ui="modern"] .modal-content {
+  border: 1px solid var(--nd2-border);
+  border-radius: 12px;
+  background: var(--nd2-surface);
+  color: var(--nd2-text);
+  box-shadow: var(--nd2-shadow);
+}
+
+:root[data-nd-ui="modern"] .modal-header,
+:root[data-nd-ui="modern"] .modal-footer {
+  border-color: var(--nd2-border);
+}
+
+:root[data-nd-ui="modern"] .dropdown-item.active,
+:root[data-nd-ui="modern"] .dropdown-item:active {
+  background: var(--nd2-accent);
+  color: #fff;
+}
+
+/* ---------- pages that stand alone: login, password, errors ---------- */
+
+:root[data-nd-ui="modern"] .nd2-main .nd_hero-row,
+:root[data-nd-ui="modern"] .nd2-main .container > .row > [class*="col-"] > .p-5 {
+  border-radius: var(--nd2-radius);
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 760px) {
+  /* a table is wider than the screen: it scrolls, rather than the page */
+  :root[data-nd-ui="modern"] .nd2-main .tab-pane,
+  :root[data-nd-ui="modern"] .nd2-main .dt-container {
+    max-width: 100%;
+  }
+
+  :root[data-nd-ui="modern"] .nd2-main .dt-container > table.dataTable {
+    display: block;
+    overflow-x: auto;
+  }
+
+  :root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-search {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  :root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-search input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  :root[data-nd-ui="modern"] .nd2-main #details_pane table.table > tbody > tr > td:first-child {
+    width: 110px;
+  }
+}
+
+/* ---------- corrections found on the real pages ---------- */
+
+/* The indicator each pane keeps for its loading message took the room of a
+   notice even when hidden. It is there while the pane's request is. */
+:root[data-nd-ui="modern"] .nd2-main .htmx-indicator.alert {
+  display: none;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .htmx-indicator.alert.htmx-request {
+  display: inline-block;
+  opacity: 1;
+}
+
+/* DataTables stripes with an inset shadow wider than any cell, not a background */
+:root[data-nd-ui="modern"] .nd2-main div.dt-container table.dataTable > tbody > tr > * {
+  box-shadow: none !important;
+  background-color: transparent;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container table.dataTable > tbody > tr:hover > * {
+  background-color: var(--nd2-surface-2);
+}
+
+/* A wide table scrolls inside the content, rather than going under the sidebar */
+:root[data-nd-ui="modern"] .nd2-main .container-fluid > .content > .tab-content {
+  overflow-x: auto;
+}
+
+:root[data-nd-ui="modern"] .nd2-main div.dt-container div.dt-length select {
+  width: auto;
+  padding-right: 30px;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_linkcell {
+  font-weight: 500;
+}
+
+/* The three small controls of the sidebar (hide, pin, reset), in its corner
+   rather than hanging off its left edge over the title */
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar .card-body {
+  position: relative;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar .card-body > :is(#nd_sidebar-toggle-img-in, .nd_sidebar-pin, #nd_sidebar-reset-link) {
+  position: absolute;
+  top: 12px;
+  float: none;
+  margin: 0;
+  z-index: 1;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar .card-body > #nd_sidebar-toggle-img-in { right: 14px; }
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar .card-body > .nd_sidebar-pin { right: 36px; }
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar .card-body > #nd_sidebar-reset-link { right: 58px; }
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar .card-body > #nd_sidebar-reset-link > i {
+  float: none;
+  margin: 0;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .nd_sidebar-form .nd_sidebar-title {
+  padding-right: 70px;
+}
+
+/* a pinned sidebar is the accent, not an alarm */
+:root[data-nd-ui="modern"] {
+  --nd-pin-active: var(--nd2-accent);
+}
+
+/* The on/off switches (bootstrap5-toggle) measure themselves from their labels
+   when they are built, so the button rules above leave them alone; they get the
+   look of the drawer's switches here: a grey track when off, the accent on. */
+:root[data-nd-ui="modern"] .nd2-main .toggle.btn {
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .toggle .toggle-off {
+  background: var(--nd2-border-strong);
+  border-color: var(--nd2-border-strong);
+  color: var(--nd2-text-2);
+}
+
+:root[data-nd-ui="modern"] .nd2-main .toggle .toggle-on {
+  background: var(--nd2-accent);
+  border-color: var(--nd2-accent);
+  color: #fff;
+}
+
+:root[data-nd-ui="modern"] .nd2-main .toggle .toggle-handle {
+  background: #fff;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .25);
+}

@@ -8,7 +8,7 @@ use URI;
 use base 'Exporter';
 our @EXPORT_OK = qw/
   web_ui_names valid_web_ui current_web_ui ui_include_paths safe_back_path
-  back_from_referer device_tab_for
+  back_from_referer device_tab_for page_segments nav_for crumbs_for
 /;
 
 =head1 NAME
@@ -139,6 +139,76 @@ sub device_tab_for {
   return $tab;
 }
 
+=head2 page_segments( $path, $base )
+
+The path's segments below the site's base path and a tenant prefix:
+C</nd/t/branch/device> under base C</nd> is C<('device')>.
+
+=cut
+
+sub page_segments {
+  my ($path, $base) = @_;
+  $path = '' unless defined $path;
+  $base = '' if not defined $base or $base eq '/';
+  # the base is a whole segment: /nd does not take the start of /ndx
+  $path =~ s{^\Q$base\E(?=/|$)}{} if length $base;
+  $path =~ s{^/t/[^/]+(?=/|$)}{};
+  return grep { length } split m{/}, $path;
+}
+
+=head2 nav_for( \@segments, $vars_nav )
+
+Which item of the rail a page belongs to. Reports, admin, inventory and
+statistics pages say so themselves (C<$vars_nav>); a device, a search and the
+list of devices are all "devices"; the front page is "home".
+
+=cut
+
+sub nav_for {
+  my ($segments, $vars_nav) = @_;
+  my $first = $segments->[0];
+  return 'home' unless defined $first;
+  return 'devices' if $first =~ m/^(?:device|devices|search)$/;
+  return $vars_nav;
+}
+
+=head2 crumbs_for( \@segments, \%context )
+
+The breadcrumb of a page: a list of C<{ label, href }>, where C<href> is an
+application path, or absent for a crumb that is not a page (there is no page of
+all reports, so "Reports" is only a name). The last crumb is the page itself.
+C<%context> holds what the path does not: C<display_name> of the device,
+C<query> of a search, and C<reports> and C<admin_tasks>, the registered ones.
+
+=cut
+
+sub crumbs_for {
+  my ($segments, $ctx) = @_;
+  my ($first, $second) = @$segments;
+  return [] unless defined $first;
+
+  return [ { label => 'Devices' } ] if $first eq 'devices';
+  return [ { label => 'Devices', href => '/devices' }, { label => $ctx->{display_name} } ]
+    if $first eq 'device' and defined $ctx->{display_name} and length $ctx->{display_name};
+  return [ { label => 'Inventory' } ] if $first eq 'inventory';
+  if ($first eq 'search') {
+    my $q = $ctx->{query};
+    return [ { label => 'Search', ((defined $q and length $q) ? (href => '/search') : ()) },
+             ((defined $q and length $q) ? { label => $q } : ()) ];
+  }
+  if ($first eq 'report' and defined $second) {
+    my $r = ($ctx->{reports} || {})->{$second} or return [ { label => 'Reports' } ];
+    return [ { label => 'Reports' },
+             ((defined $r->{category} and length $r->{category}) ? { label => $r->{category} } : ()),
+             { label => ($r->{label} // $second) } ];
+  }
+  if ($first eq 'admin' and defined $second) {
+    my $t = ($ctx->{admin_tasks} || {})->{$second} or return [ { label => 'Admin' } ];
+    return [ { label => 'Admin' }, { label => ($t->{label} // $second) } ];
+  }
+  return [];
+}
+
 hook 'before' => sub {
   my $picked = cookie(COOKIE);
   var(web_ui => (valid_web_ui($picked) ? $picked : setting('_default_web_ui')));
@@ -148,6 +218,16 @@ hook 'before_template' => sub {
   my $tokens = shift;
   $tokens->{web_ui} = current_web_ui();
   $tokens->{web_ui_names} = [ web_ui_names() ];
+
+  return unless current_web_ui() eq 'modern' and not request->is_ajax;
+  my @segments = page_segments(request->path, setting('path'));
+  $tokens->{nd2_nav} = nav_for(\@segments, vars->{'nav'});
+  $tokens->{nd2_crumbs} = crumbs_for(\@segments, {
+    display_name => $tokens->{display_name},
+    query        => scalar param('q'),
+    reports      => setting('_reports'),
+    admin_tasks  => setting('_admin_tasks'),
+  });
 };
 
 post '/web_ui' => require_login sub {
