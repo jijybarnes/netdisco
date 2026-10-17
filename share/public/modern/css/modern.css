@@ -192,6 +192,11 @@ body.nd2.nd2-signed-in {
 }
 
 /* the shortcut hint only matters before the box is in use */
+/* WebKit and Blink draw their own clear button in a search box, over the
+   shortcut hint; the top bar's box opens the palette, so it has nothing to
+   clear */
+.nd2-search #nq::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+
 .nd2-search #nq:focus ~ .nd2-kbd {
   display: none;
 }
