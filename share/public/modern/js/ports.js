@@ -6,7 +6,7 @@
 // The pure functions are exported for xt/js/modern-ports.test.js; mount() is
 // the DOM wiring, started for each [data-nd2-ports] element that appears.
 
-import { createDrawer } from './drawer.js';
+import { createDrawer, formatMac, vlanName, MAC_FORMATS } from './drawer.js';
 import { affectsDevice } from './jobs-core.js';
 import { el } from './dom.js';
 
@@ -119,32 +119,64 @@ export const CHIPS = [
   { key: 'nodes', label: 'Has nodes', test: (p) => (p.node_count || 0) > 0 },
   { key: 'neighbors', label: 'Neighbors', test: (p) => !!p.neighbor },
   { key: 'poe', label: 'PoE', test: (p) => !!(p.poe && p.poe.power_mw) },
+  // down for longer than the site's "Mark as Free if Down for", as the API says
+  { key: 'free', label: 'Free', test: (p) => p.is_free === true },
 ];
 
-function haystack(p) {
+function haystack(p, vlans) {
   const n = p.neighbor || {};
+  const inv = n.inventory || {};
+  const last = p.last_node || {};
+  const names = (vlans || []).length
+    ? [p.native_vlan, ...(p.vlans || [])].map((v) => vlanName(vlans, v)) : [];
   return [p.port, p.name, p.descr, p.mac, p.type, p.error_disable_cause, n.ip, n.dns, n.port, n.id,
-    ...(p.vlans || []).map(String), p.native_vlan != null ? String(p.native_vlan) : null, ...(p.tags || [])]
+    inv.vendor, inv.model, inv.serial, last.mac, last.ip, last.dns, last.vendor, p.last_comment,
+    p.nac && p.nac.user, ...(p.ssids || []), ...Object.values(p.custom_fields || {}).map((v) => (v == null ? null : String(v))),
+    ...(p.vlans || []).map(String), p.native_vlan != null ? String(p.native_vlan) : null, ...(p.tags || []), ...names]
     .filter((v) => v != null).join('\n').toLowerCase();
 }
 
-// Every word must appear somewhere in the port; a word that is only digits
-// also matches a VLAN exactly, which is what someone typing "20" means.
-export function matchesText(p, q) {
-  const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
-  if (!words.length) return true;
-  const hay = haystack(p);
-  return words.every((w) => hay.includes(w));
+// Every word must appear somewhere in the port, and a word written -word must
+// not: the classic sidebar's "Not". Each word is matched anywhere in a value,
+// which is its "Partial Match"; * stands for anything, as there.
+export function parseFilter(q) {
+  // a lone dash is a "-word" being typed, not a dash to look for
+  return String(q || '').toLowerCase().split(/\s+/).filter((w) => w && w !== '-').map((w) => {
+    const not = w.length > 1 && w[0] === '-';
+    const word = not ? w.slice(1) : w;
+    const re = word.includes('*')
+      ? new RegExp(word.split('*').map((x) => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*'))
+      : null;
+    return { not, word, re };
+  });
 }
 
-export function filterPorts(ports, { chips = new Set(), q = '' } = {}) {
+export function matchesText(p, q, vlans) {
+  const words = Array.isArray(q) ? q : parseFilter(q);
+  if (!words.length) return true;
+  const hay = haystack(p, vlans);
+  return words.every(({ not, word, re }) => (re ? re.test(hay) : hay.includes(word)) !== not);
+}
+
+// A subinterface (Gi1/0/1.20) whose parent is on the list too, which the
+// classic tab folds under it.
+export function isFoldedSubinterface(p, names) {
+  const m = /^(.+)\.\d+$/.exec(p.port || '');
+  return !!(m && names.has(m[1]));
+}
+
+export function filterPorts(ports, { chips = new Set(), q = '', vlans = [], view = {} } = {}) {
   const tests = CHIPS.filter((c) => chips.has(c.key)).map((c) => c.test);
-  return ports.filter((p) => tests.every((t) => t(p)) && matchesText(p, q));
+  const words = parseFilter(q);
+  const names = new Set(ports.map((p) => p.port));
+  return ports.filter((p) => tests.every((t) => t(p)) && matchesText(p, words, vlans)
+    && !(view.foldSubinterfaces && isFoldedSubinterface(p, names)));
 }
 
 // Stable: equal keys keep the order the API sent, which is port order.
-export function sortPorts(ports, column, dir = 1) {
-  const col = COLUMNS[column];
+// def: the column's definition when it is not one of COLUMNS (a custom field)
+export function sortPorts(ports, column, dir = 1, def = null) {
+  const col = COLUMNS[column] || def;
   const indexed = ports.map((p, i) => [p, i]);
   if (!col || !col.sort) return dir < 0 ? indexed.reverse().map(([p]) => p) : ports.slice();
   const key = col.sort;
@@ -170,6 +202,17 @@ const txt = (text, cls) => (text == null || text === '' ? [] : [{ text: String(t
 const dash = (parts) => (parts.length ? parts : [{ text: '—', cls: 'nd2-muted' }]);
 const st = (p) => [{ status: p.status, text: STATUS_LABEL[p.status] || p.status }];
 
+// A VLAN as the table writes it: its number, or its name when the view asks
+// for names ("Use VLAN Names"), the other one in the tooltip either way.
+const vl = (n, ctx) => {
+  const name = vlanName(ctx.vlans, n);
+  return ctx.view.vlanNames && name
+    ? { text: name, cls: 'nd2-vl', title: `VLAN ${n}` }
+    : { text: String(n), cls: 'nd2-vl', title: name || undefined };
+};
+const HIDDEN_VLANS = (n) => n >= 1002 && n <= 1005;
+const NO_CTX = { vlans: [], view: {} };
+
 export const COLUMNS = {
   // the port's own state is drawn beside its name unless the Status column says it
   c_port: {
@@ -194,15 +237,15 @@ export const COLUMNS = {
     sort: (p) => p.duplex,
   },
   c_error: { cells: (p) => dash(txt(p.error_disable_cause, 'nd2-text-critical')), sort: (p) => p.error_disable_cause },
-  c_mac: { cells: (p) => dash(txt(p.mac, 'nd2-mono')), sort: (p) => p.mac },
+  c_mac: { cells: (p, shown, ctx = NO_CTX) => dash(txt(p.mac && formatMac(p.mac, ctx.view.macFormat), 'nd2-mono')), sort: (p) => p.mac },
   c_mtu: { cells: (p) => dash(txt(p.mtu)), sort: (p) => p.mtu, num: true },
-  c_pvid: { cells: (p) => (p.native_vlan != null ? [{ text: String(p.native_vlan), cls: 'nd2-vl' }] : dash([])), sort: (p) => p.native_vlan },
+  c_pvid: { cells: (p, shown, ctx = NO_CTX) => (p.native_vlan != null ? [vl(p.native_vlan, ctx)] : dash([])), sort: (p) => p.native_vlan },
   c_vmember: {
-    cells: (p) => {
-      const v = p.vlans || [];
+    cells: (p, shown, ctx = NO_CTX) => {
+      const v = (p.vlans || []).filter((n) => !(ctx.view.hide1002 && HIDDEN_VLANS(n)));
       if (!v.length) return dash([]);
-      const shown = v.slice(0, 12).map((n) => ({ text: String(n), cls: 'nd2-vl' }));
-      return v.length > 12 ? shown.concat([{ text: `+${v.length - 12}`, cls: 'nd2-pill', title: v.slice(12).join(', ') }]) : shown;
+      const list = v.slice(0, 12).map((n) => vl(n, ctx));
+      return v.length > 12 ? list.concat([{ text: `+${v.length - 12}`, cls: 'nd2-pill', title: v.slice(12).join(', ') }]) : list;
     },
     sort: (p) => (p.vlans || []).length,
   },
@@ -216,10 +259,10 @@ export const COLUMNS = {
   },
   c_nodes: {
     // the node seen last, by its address when it has one, and how many more
-    cells: (p) => {
+    cells: (p, shown, ctx = NO_CTX) => {
       const n = p.last_node;
       if (!n) return p.node_count ? [{ text: p.node_count === 1 ? '1 node' : `${p.node_count} nodes` }] : dash([]);
-      const parts = [{ text: n.mac, cls: 'nd2-mono', title: [n.vendor, n.dns].filter(Boolean).join(' · ') || undefined }];
+      const parts = [{ text: formatMac(n.mac, ctx.view.macFormat), cls: 'nd2-mono', title: [n.vendor, n.dns].filter(Boolean).join(' · ') || undefined }];
       if (n.ip) parts.push({ text: n.ip, cls: 'nd2-mono nd2-muted' });
       if (p.node_count > 1) parts.push({ text: `+${p.node_count - 1}`, cls: 'nd2-pill', title: `${p.node_count} nodes on this port` });
       return parts;
@@ -231,7 +274,9 @@ export const COLUMNS = {
       const n = p.neighbor;
       if (!n) return dash([]);
       const name = n.dns || n.ip || n.id;
-      const parts = [n.device_ip ? { text: name, device: n.device_ip, title: n.type || undefined } : { text: name, title: n.type || undefined }];
+      const inv = n.inventory;
+      const title = [inv && [inv.vendor, inv.model].filter(Boolean).join(' '), n.type].filter(Boolean).join(' · ') || undefined;
+      const parts = [n.device_ip ? { text: name, device: n.device_ip, title } : { text: name, title }];
       if (n.port) parts.push({ text: n.port, cls: 'nd2-mono nd2-muted' });
       return parts;
     },
@@ -242,7 +287,31 @@ export const COLUMNS = {
     sort: (p) => p.stp_state,
   },
   c_tags: { cells: (p) => dash((p.tags || []).map((t) => ({ text: t, cls: 'nd2-pill' }))), sort: (p) => (p.tags || []).join(',') },
+  c_comment: { cells: (p) => dash(txt(p.last_comment)), sort: (p) => (p.last_comment || '').toLowerCase() },
+  c_ssid: { cells: (p) => dash(txt((p.ssids || []).join(', '))), sort: (p) => (p.ssids || []).join(',') },
+  c_nac_summary: {
+    // what the classic tab draws as icons, said in words: only on a linked port
+    cells: (p) => {
+      const n = p.nac;
+      if (!n || p.oper_status !== 'up') return dash([]);
+      const ok = n.port_status === 'authorized';
+      const parts = [{ status: ok ? 'up' : 'errdisabled', text: n.port_status || 'unknown', title: n.state || undefined }];
+      if (n.user) parts.push({ text: `${n.is_mab ? 'MAB' : '802.1X'} ${n.user}`, cls: 'nd2-muted' });
+      return parts;
+    },
+    sort: (p) => (p.nac ? p.nac.port_status : null),
+  },
 };
+
+// A custom field's column (custom_fields in the settings): its value as text.
+export function customColumn(name) {
+  return {
+    cells: (p) => dash(txt((p.custom_fields || {})[name])),
+    sort: (p) => String((p.custom_fields || {})[name] == null ? '' : p.custom_fields[name]).toLowerCase(),
+  };
+}
+
+export const columnDef = (c) => COLUMNS[c.name] || (c.custom ? customColumn(c.name) : null);
 
 // The columns the server offers (settings.port_columns, in its order, with the
 // site's labels and defaults) that this tab can draw. Port is always shown.
@@ -252,19 +321,20 @@ export const COLUMNS = {
 // next to the port and shorter headings. A column not named here keeps the
 // site's label and goes after these, in the site's order.
 export const COLUMN_ORDER = ['c_port', 'c_up', 'c_name', 'c_descr', 'c_speed', 'c_speed_admin', 'c_duplex', 'c_duplex_admin',
-  'c_pvid', 'c_vmember', 'c_power', 'c_nodes', 'c_neighbors', 'c_stp', 'c_lastchange'];
+  'c_pvid', 'c_vmember', 'c_power', 'c_nodes', 'c_neighbors', 'c_stp', 'c_lastchange', 'c_comment'];
 
 export const COLUMN_LABEL = {
   c_up: 'Status', c_name: 'Name', c_descr: 'Description', c_speed: 'Speed', c_speed_admin: 'Speed (set)',
   c_duplex: 'Duplex', c_duplex_admin: 'Duplex (set)', c_pvid: 'Native VLAN', c_vmember: 'VLAN membership',
   c_power: 'PoE', c_nodes: 'Connected nodes', c_neighbors: 'Connected device', c_stp: 'Spanning tree', c_lastchange: 'Last change',
+  c_comment: 'Last comment', c_nac_summary: '802.1X',
 };
 
 export function usableColumns(offered) {
   const rank = (name) => { const i = COLUMN_ORDER.indexOf(name); return i < 0 ? COLUMN_ORDER.length : i; };
   return (offered || [])
     .map((c, i) => ({ c, i }))
-    .filter(({ c }) => COLUMNS[c.name])
+    .filter(({ c }) => columnDef(c))
     .sort((a, b) => rank(a.c.name) - rank(b.c.name) || a.i - b.i)
     .map(({ c }) => ({ ...c, label: COLUMN_LABEL[c.name] || c.label }));
 }
@@ -296,6 +366,25 @@ export function loadPrefs(storage) {
 
 export function savePrefs(storage, prefs) {
   try { storage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) { /* private mode, quota */ }
+}
+
+// The classic sidebar's display options, as this tab keeps them: what the
+// browser chose, else the site's defaults (sidebar_defaults), else the
+// classic ones. A value this tab does not offer is not kept.
+export const FREE_UNITS = ['days', 'weeks', 'months', 'years'];
+
+export function viewOptions(saved, site = {}) {
+  const v = saved && typeof saved === 'object' ? saved : {};
+  const pick = (k, ok, dflt) => (ok(v[k]) ? v[k] : (ok(site[k]) ? site[k] : dflt));
+  const bool = (x) => typeof x === 'boolean';
+  return {
+    foldSubinterfaces: pick('foldSubinterfaces', bool, false),
+    vlanNames: pick('vlanNames', bool, false),
+    hide1002: pick('hide1002', bool, false),
+    macFormat: pick('macFormat', (x) => MAC_FORMATS.includes(x), 'IEEE'),
+    freeAge: pick('freeAge', (x) => Number.isInteger(x) && x >= 1 && x <= 31, 3),
+    freeUnit: pick('freeUnit', (x) => FREE_UNITS.includes(x), 'months'),
+  };
 }
 
 // ---------- DOM ----------
@@ -334,16 +423,21 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
   const reasons = JSON.parse(root.getAttribute('data-nd2-reasons') || '[]');
   const device = root.getAttribute('data-nd2-device');
   const model = (root.getAttribute('data-nd2-model') || '').slice(0, 16);
-  const drawer = createDrawer({
-    doc, win, fetchJson, post, toast, uriBase, reasons, device,
-    apiBase: root.getAttribute('data-nd2-api'),
-  });
+  const apiBase = root.getAttribute('data-nd2-api');
+  const site = JSON.parse(root.getAttribute('data-nd2-view') || '{}');
+  const fields = offered.filter((c) => c.custom).map((c) => ({ name: c.name, label: c.label, editable: !!c.editable }));
   const prefs = loadPrefs(storage);
   const state = {
     ports: [], shown: [], chips: new Set(), q: root.getAttribute('data-nd2-filter') || '',
     sort: 'c_port', dir: 1, mode: prefs.mode || 'status', selected: null,
     hidden: false, faceplate: prefs.faceplate !== false, slots: new Map(),
+    vlans: [], view: viewOptions(prefs.view, site),
   };
+  const drawer = createDrawer({
+    doc, win, fetchJson, post, toast, uriBase, reasons, device, apiBase, fields,
+    deviceName: root.getAttribute('data-nd2-device-name') || device,
+    view: () => state.view,
+  });
 
   const $ = (sel) => root.querySelector(sel);
   const table = $('.nd2-ports-table');
@@ -353,7 +447,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
   search.value = state.q;
 
   function persist() {
-    savePrefs(storage, { ...prefs, mode: state.mode, faceplate: state.faceplate });
+    savePrefs(storage, { ...prefs, mode: state.mode, faceplate: state.faceplate, view: state.view });
   }
 
   function mark() {
@@ -421,10 +515,11 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
   function drawTable() {
     const cols = visibleColumns(offered, prefs.columns);
     const shown = new Set(cols.map((c) => c.name));
+    const ctx = { vlans: state.vlans, view: state.view };
     const thead = el(doc, 'thead', {}, [el(doc, 'tr', {}, cols.map((c) => {
       const sorted = state.sort === c.name;
       const th = el(doc, 'th', {
-        scope: 'col', class: COLUMNS[c.name].num && 'nd2-num',
+        scope: 'col', class: columnDef(c).num && 'nd2-num',
         'aria-sort': sorted ? (state.dir > 0 ? 'ascending' : 'descending') : 'none',
       }, [el(doc, 'button', { type: 'button', class: 'nd2-th', text: c.label }, [
         el(doc, 'span', { class: 'nd2-arrow', 'aria-hidden': 'true', text: sorted ? (state.dir > 0 ? '▲' : '▼') : '' })])]);
@@ -435,11 +530,11 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
       });
       return th;
     }))]);
-    const rows = sortPorts(state.shown, state.sort, state.dir);
+    const rows = sortPorts(state.shown, state.sort, state.dir, columnDef(cols.find((c) => c.name === state.sort) || {}));
     const tbody = el(doc, 'tbody', {}, rows.map((p) => {
       const tr = el(doc, 'tr', { 'data-nd2-port': p.port, tabindex: '0', class: state.selected === p.port && 'nd2-sel' },
-        cols.map((c) => el(doc, 'td', { class: COLUMNS[c.name].num && 'nd2-num', 'data-label': c.label, 'data-col': c.name },
-          COLUMNS[c.name].cells(p, shown).map((part) => renderPart(doc, part, uriBase)))));
+        cols.map((c) => el(doc, 'td', { class: columnDef(c).num && 'nd2-num', 'data-label': c.label, 'data-col': c.name },
+          columnDef(c).cells(p, shown, ctx).map((part) => renderPart(doc, part, uriBase)))));
       tr.addEventListener('click', (e) => { if (!e.target.closest('a')) select(p.port, 'table', tr); });
       // a row is a control: reachable by Tab, opened by Enter or Space
       tr.addEventListener('keydown', (e) => {
@@ -456,6 +551,10 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
 
   function refilter() {
     state.shown = filterPorts(state.ports, state);
+    const folded = state.view.foldSubinterfaces
+      ? state.ports.filter((p) => isFoldedSubinterface(p, new Set(state.ports.map((x) => x.port)))).length : 0;
+    const note = $('.nd2-view-folded');
+    if (note) note.textContent = folded ? `${folded} hidden` : '';
     drawPanel();
     drawTable();
   }
@@ -463,7 +562,9 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
   async function load() {
     root.setAttribute('aria-busy', 'true');
     try {
-      const src = root.getAttribute('data-nd2-src') + (state.hidden ? '?include_hidden=1' : '');
+      const q = new URLSearchParams({ free_age: String(state.view.freeAge), free_unit: state.view.freeUnit });
+      if (state.hidden) q.set('include_hidden', '1');
+      const src = `${root.getAttribute('data-nd2-src')}?${q}`;
       const body = await fetchJson(src);
       state.ports = body.data || [];
       state.slots = vlanSlots(state.ports);
@@ -478,6 +579,17 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     } finally {
       root.removeAttribute('aria-busy');
     }
+  }
+
+  // the device's VLANs, by number and name, once: for the native VLAN list
+  // and for the names the table can show instead of numbers
+  async function loadVlans() {
+    try {
+      const body = await fetchJson(`${apiBase}/devices/${encodeURIComponent(device)}/vlans`);
+      state.vlans = body.data || [];
+      drawer.setVlans(state.vlans);
+      if (state.view.vlanNames) drawTable();
+    } catch (e) { /* the numbers alone, and a typed VLAN in the drawer */ }
   }
 
   // ---- the drawer and the jobs list ----
@@ -527,6 +639,34 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
   const hiddenBox = $('.nd2-ports-hidden');
   if (hiddenBox) hiddenBox.addEventListener('change', () => { state.hidden = hiddenBox.checked; load(); });
 
+  // the View menu: the classic sidebar's display options
+  const opt = (name) => root.querySelector(`[data-nd2-view="${name}"]`);
+  const viewBoxes = { foldSubinterfaces: refilter, vlanNames: drawTable, hide1002: drawTable };
+  Object.entries(viewBoxes).forEach(([name, redraw]) => {
+    const box = opt(name);
+    if (!box) return;
+    box.checked = state.view[name];
+    box.addEventListener('change', () => { state.view[name] = box.checked; persist(); redraw(); });
+  });
+  const macBox = opt('macFormat');
+  if (macBox) {
+    macBox.value = state.view.macFormat;
+    macBox.addEventListener('change', () => { state.view.macFormat = macBox.value; persist(); drawTable(); });
+  }
+  const ageBox = opt('freeAge');
+  const unitBox = opt('freeUnit');
+  if (ageBox && unitBox) {
+    ageBox.value = String(state.view.freeAge);
+    unitBox.value = state.view.freeUnit;
+    const changed = () => {
+      state.view = viewOptions({ ...state.view, freeAge: Number(ageBox.value), freeUnit: unitBox.value }, site);
+      persist();
+      load();
+    };
+    ageBox.addEventListener('change', changed);
+    unitBox.addEventListener('change', changed);
+  }
+
   // the column picker lists what this tab can draw, in the server's order
   const picker = $('.nd2-colpick-list');
   usableColumns(offered).filter((c) => c.name !== 'c_port').forEach((c) => {
@@ -549,6 +689,7 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     drawTable();
   });
 
+  loadVlans();
   return load();
 }
 

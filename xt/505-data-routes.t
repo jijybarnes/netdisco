@@ -76,7 +76,9 @@ subtest 'swagger__v2_routes__are_documented_under_their_own_tag' => sub {
     '/api/v2/devices/{ip}',
     '/api/v2/devices/{ip}/ports',
     '/api/v2/devices/{ip}/ports/{port}',
+    '/api/v2/devices/{ip}/ports/{port}/log',
     '/api/v2/devices/{ip}/ports/{port}/nodes',
+    '/api/v2/devices/{ip}/vlans',
   ], 'the device and port resources, braces unencoded';
   is_deeply $doc->{paths}{'/api/v2/xt/echo/{thing}'}{get}{tags}, ['Objects v2'],
     'tagged Objects v2';
