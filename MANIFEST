@@ -179,7 +179,6 @@ lib/App/Netdisco/Web/API/Objects.pm
 lib/App/Netdisco/Web/API/Queue.pm
 lib/App/Netdisco/Web/API/Statistics.pm
 lib/App/Netdisco/Web/API/User.pm
-lib/App/Netdisco/Web/API/V2.pm
 lib/App/Netdisco/Web/Auth/Provider/DBIC.pm
 lib/App/Netdisco/Web/AuthN.pm
 lib/App/Netdisco/Web/CustomFields.pm
@@ -191,10 +190,7 @@ lib/App/Netdisco/Web/Data/Ports.pm
 lib/App/Netdisco/Web/Data/Search.pm
 lib/App/Netdisco/Web/Data/Summary.pm
 lib/App/Netdisco/Web/Device.pm
-lib/App/Netdisco/Web/DeviceOverview.pm
-lib/App/Netdisco/Web/DevicesPage.pm
 lib/App/Netdisco/Web/GenericReport.pm
-lib/App/Netdisco/Web/HomePage.pm
 lib/App/Netdisco/Web/Health.pm
 lib/App/Netdisco/Web/Metrics.pm
 lib/App/Netdisco/Web/Password.pm
@@ -253,7 +249,6 @@ lib/App/Netdisco/Web/Plugin/Search/Node.pm
 lib/App/Netdisco/Web/Plugin/Search/Port.pm
 lib/App/Netdisco/Web/Plugin/Search/VLAN.pm
 lib/App/Netdisco/Web/PortControl.pm
-lib/App/Netdisco/Web/PortsModern.pm
 lib/App/Netdisco/Web/Report.pm
 lib/App/Netdisco/Web/Search.pm
 lib/App/Netdisco/Web/Static.pm
@@ -261,6 +256,13 @@ lib/App/Netdisco/Web/Statistics.pm
 lib/App/Netdisco/Web/Theme.pm
 lib/App/Netdisco/Web/TypeAhead.pm
 lib/App/Netdisco/Web/UI.pm
+lib/App/Netdisco/Web/UI/Modern.pm
+lib/App/Netdisco/Web/UI/Modern/Data.pm
+lib/App/Netdisco/Web/UI/Modern/DevicesPage.pm
+lib/App/Netdisco/Web/UI/Modern/Home.pm
+lib/App/Netdisco/Web/UI/Modern/Overview.pm
+lib/App/Netdisco/Web/UI/Modern/Ports.pm
+lib/App/Netdisco/Web/UI/Modern/Shell.pm
 lib/App/Netdisco/Worker/Actions.pm
 lib/App/Netdisco/Worker/Loader.pm
 lib/App/Netdisco/Worker/Plugin.pm
@@ -789,6 +791,8 @@ xt/512-devices-page-template.t
 xt/513-modern-ui-plugins.t
 xt/514-palette-and-search.t
 xt/515-modern-details-modules-home.t
+xt/516-web-ui-route-in-front.t
+xt/517-web-ui-none.t
 xt/51-updated-device-hook.t
 xt/52-token-acl-auth.t
 xt/53-ports-csv-arity.t

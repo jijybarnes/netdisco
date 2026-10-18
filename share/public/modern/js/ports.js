@@ -1,5 +1,5 @@
 // The modern Ports tab: the device's front panel and its ports table, both
-// drawn from the normalized ports of API v2 (/ajax/data/v2/devices/{ip}/ports)
+// drawn from the normalized ports (/ajax/data/v2/devices/{ip}/ports)
 // and filtered together. Everything a cell shows is set as text, never as
 // markup, so nothing a device reports can reach the page as HTML.
 //

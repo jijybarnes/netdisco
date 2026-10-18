@@ -1,4 +1,4 @@
-[%# The modern Ports tab's CSV download: every port, normalized as API v2
+[%# The modern Ports tab's CSV download: every port, normalized as the data routes
     returns it. CSV is App::Netdisco::Template::Plugin::CSV, which neutralizes
     a cell that a spreadsheet would read as a formula. Each dump is followed by
     an empty line because PRE_CHOMP takes one newline before every directive,

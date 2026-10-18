@@ -6,9 +6,9 @@ use warnings;
 use Test::More 0.88;
 
 use App::Netdisco::Web::Data::Search qw/classify_query like_pattern normalize_node_hit/;
-use App::Netdisco::Web::UI 'palette_index';
+use App::Netdisco::Web::UI::Modern::Shell 'palette_index';
 
-# The command palette: what GET /api/v2/search takes the typed text to be, and
+# The command palette: what GET /ajax/data/v2/search takes the typed text to be, and
 # what the palette offers without asking the server, which is what the core
 # and the web plugins registered. Pure, so pinned without a database (xt/36).
 

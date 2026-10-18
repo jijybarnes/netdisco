@@ -1,6 +1,6 @@
 // The command palette: Ctrl+K (Cmd+K) or "/" from anywhere, or the search box
 // in the top bar. It finds what to go to as the user types: the first few
-// devices, nodes, port descriptions and VLANs from GET /api/v2/search, and the
+// devices, nodes, port descriptions and VLANs from GET /ajax/data/v2/search, and the
 // pages, reports, admin tasks and search tabs the core and the web plugins
 // registered (App::Netdisco::Web::UI::palette_index, in data-nd2-palette). The
 // classic search, for everything that matches, is always one of the choices,

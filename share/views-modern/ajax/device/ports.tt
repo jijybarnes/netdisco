@@ -1,5 +1,5 @@
 [%# The modern Ports tab (App::Netdisco::Web::PortsModern): a shell that
-    share/public/modern/js/ports.js fills from API v2. data-nd2-columns is the
+    share/public/modern/js/ports.js fills from /ajax/data/v2. data-nd2-columns is the
     site's port_columns (names, labels, defaults); data-nd2-filter the filter
     the tab was opened with. -%]
 <div class="nd2-ports" data-nd2-ports

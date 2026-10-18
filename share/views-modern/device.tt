@@ -2,7 +2,7 @@
     the classic page's own (share/views/device.tt), ids, classes and htmx
     attributes unchanged, because netdisco.js drives the tabs not yet moved to
     share/views-modern through them. The header reads nd2_device, the same
-    normalized device as API v2. -%]
+    normalized device as the interface's data routes (UI::Modern::Data). -%]
 [% SET d = nd2_device %]
 <header class="nd2-dev-head">
   <div class="nd2-dev-icon" aria-hidden="true"><i class="fas fa-server"></i></div>

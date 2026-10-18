@@ -24,7 +24,10 @@ sub write_file {
   close $fh;
 }
 
-# ---- where the modern interface looks for its templates ----
+# ---- where an interface looks for its templates ----
+
+# Any interface, not only the modern one: a throwaway "xtui" is registered here
+# and found through the same paths the modern one is.
 
 {
   package XtPluginUser;
@@ -34,67 +37,84 @@ sub write_file {
 
 my $plugin = File::Temp->newdir(CLEANUP => 1);
 write_file(catfile("$plugin", 'views', 'plugin', 'xtcol', 'device_port_column.tt'), "x\n");
-write_file(catfile("$plugin", 'views-modern', 'device.tt'), "x\n");
+write_file(catfile("$plugin", 'views-xtui', 'device.tt'), "x\n");
 my $plain = File::Temp->newdir(CLEANUP => 1);
 write_file(catfile("$plain", 'views', 'x.tt'), "x\n");
 
 XtPluginUser::register_template_path("$plugin");
 XtPluginUser::register_template_path("$plain");
-is_deeply Dancer::setting('_plugin_template_paths'), [ "$plain/views", "$plugin/views" ],
-  'registerTemplatePath__views__recorded_last_registered_first';
-is_deeply Dancer::setting('_plugin_modern_template_paths'), [ "$plugin/views-modern" ],
-  'registerTemplatePath__plugin_with_views_modern__offers_it_to_the_modern_interface';
+is_deeply Dancer::setting('_plugin_template_roots'), [ "$plain", "$plugin" ],
+  'registerTemplatePath__root__recorded_last_registered_first';
 ok scalar(grep { $_ eq "$plugin/views" } @{ Dancer::config()->{engines}{netdisco_template_toolkit}{INCLUDE_PATH} }),
   'registerTemplatePath__views__still_on_the_engine_path_as_before';
 
-use App::Netdisco::Web::UI qw/modern_dirs_for modern_shadowed_overrides ui_include_paths/;
+use App::Netdisco::Web::UI qw/register_web_ui web_ui web_ui_names valid_web_ui web_ui_module
+                              ui_dirs_for ui_shadowed_overrides ui_include_paths/;
 
-my $site = File::Temp->newdir(CLEANUP => 1);
-make_path(catfile("$site", 'share', 'views'), catfile("$site", 'share', 'views-modern'), catfile("$site", 'mine', 'views-modern'));
-is_deeply [ modern_dirs_for("$site/share/views", "$site/share", "$site/mine", "$site/none", undef) ],
-  [ "$site/share/views-modern", "$site/mine/views-modern" ],
-  'modernDirsFor__template_paths__beside_views_else_inside_existing_ones_once';
+is web_ui_module('Modern'), 'App::Netdisco::Web::UI::Modern', 'webUiModule__core_name__under_web_ui';
+is web_ui_module('X::Mine'), 'App::NetdiscoX::Web::UI::Mine', 'webUiModule__x_name__site_local_like_plugins';
+is web_ui_module('+Some::Module'), 'Some::Module', 'webUiModule__plus__the_module_as_written';
+is web_ui_module(''), undef, 'webUiModule__nothing__none';
 
-{
-  Dancer::set('_ui_override_paths' => [ "$site/share/views-modern", "$plugin/views-modern" ]);
-  Dancer::set('_default_web_ui' => 'modern');
-  Dancer::set('views' => 'share/views');
-  my $paths = ui_include_paths();
-  is_deeply [ @$paths[0,1] ], [ "$site/share/views-modern", "$plugin/views-modern" ],
-    'uiIncludePaths__modern__site_then_plugins_first';
-  like $paths->[-1], qr{share/views-modern$}, 'uiIncludePaths__modern__the_core_last';
-  Dancer::set('_default_web_ui' => 'classic');
-  is_deeply ui_include_paths(), [], 'uiIncludePaths__classic__nothing_in_front_of_the_classic_chain';
-  Dancer::set('_ui_override_paths' => []);
-}
+ok !eval { register_web_ui({ name => 'classic' }); 1 }, 'registerWebUi__classic__is_built_in';
+ok !eval { register_web_ui({ name => 'Bad Name' }); 1 }, 'registerWebUi__odd_name__refused';
+ok !valid_web_ui('xtui'), 'validWebUi__not_registered__not_valid';
 
-# a classic override of a template the modern interface draws itself
 my $core = File::Temp->newdir(CLEANUP => 1);
 write_file(catfile("$core", $_), "x\n") for 'device.tt', 'ajax/device/ports.tt', 'layouts/main.tt';
+my $ui = register_web_ui({ name => 'xtui', views => "$core" });
+ok valid_web_ui('xtui'), 'registerWebUi__name__now_valid';
+is_deeply [ web_ui_names() ], [ sort 'classic', 'xtui' ], 'webUiNames__classic_and_what_registered';
+is $ui->{switch_label}, 'Try the xtui interface', 'registerWebUi__no_label__a_default_for_the_classic_menu';
+
+my $site = File::Temp->newdir(CLEANUP => 1);
+make_path(catfile("$site", 'share', 'views'), catfile("$site", 'share', 'views-xtui'), catfile("$site", 'mine', 'views-xtui'));
+is_deeply [ ui_dirs_for('xtui', "$site/share/views", "$site/share", "$site/mine", "$site/none", undef) ],
+  [ "$site/share/views-xtui", "$site/mine/views-xtui" ],
+  'uiDirsFor__template_paths__beside_views_else_inside_existing_ones_once';
+is_deeply [ ui_dirs_for('other', "$site/share/views") ], [], 'uiDirsFor__another_interface__its_own_name_only';
+
+{
+  my @warnings;
+  local $SIG{__WARN__} = sub { push @warnings, @_ };
+  App::Netdisco::Web::UI::setup_web_uis([ "$site/share/views" ]);
+  is_deeply web_ui('xtui')->{overrides}, [ "$site/share/views-xtui", "$plugin/views-xtui" ],
+    'setupWebUis__overrides__the_sites_then_the_plugins_views_NAME';
+  is ref(Dancer::config()->{engines}{netdisco_template_toolkit}{INCLUDE_PATH}[0]), 'CODE',
+    'setupWebUis__overlay__in_front_of_every_template_path';
+
+  Dancer::set('_default_web_ui' => 'xtui');
+  is_deeply ui_include_paths(), [ "$site/share/views-xtui", "$plugin/views-xtui", "$core" ],
+    'uiIncludePaths__an_interface__its_overrides_then_its_own_views';
+  Dancer::set('_default_web_ui' => 'classic');
+  is_deeply ui_include_paths(), [], 'uiIncludePaths__classic__nothing_in_front_of_the_classic_chain';
+}
+
+# a classic override of a template an interface draws itself
 my $classic = File::Temp->newdir(CLEANUP => 1);
 write_file(catfile("$classic", $_), "x\n") for 'device.tt', 'ajax/device/ports.tt', 'ajax/device/details.tt', 'layouts/main.tt';
-my $modern = File::Temp->newdir(CLEANUP => 1);
-write_file(catfile("$modern", 'device.tt'), "x\n");
+my $own = File::Temp->newdir(CLEANUP => 1);
+write_file(catfile("$own", 'device.tt'), "x\n");
 
-is_deeply [ map { $_->[1] } modern_shadowed_overrides([ "$classic" ], [], "$core") ],
+is_deeply [ map { $_->[1] } ui_shadowed_overrides([ "$classic" ], [], "$core") ],
   [ 'ajax/device/ports.tt', 'device.tt' ],
-  'modernShadowedOverrides__classic_override_of_a_modern_template__reported';
-is_deeply [ map { $_->[1] } modern_shadowed_overrides([ "$classic" ], [ "$modern" ], "$core") ],
+  'uiShadowedOverrides__classic_override_of_an_interface_template__reported';
+is_deeply [ map { $_->[1] } ui_shadowed_overrides([ "$classic" ], [ "$own" ], "$core") ],
   [ 'ajax/device/ports.tt' ],
-  'modernShadowedOverrides__with_its_own_modern_version__not_reported';
-ok !grep({ $_->[1] =~ m/details|layouts/ } modern_shadowed_overrides([ "$classic" ], [], "$core")),
-  'modernShadowedOverrides__template_modern_does_not_draw_or_a_layout__not_reported';
-is_deeply [ modern_shadowed_overrides([ "$classic" ], [], "$core/none") ], [],
-  'modernShadowedOverrides__no_modern_views__nothing';
+  'uiShadowedOverrides__with_its_own_version_for_the_interface__not_reported';
+ok !grep({ $_->[1] =~ m/details|layouts/ } ui_shadowed_overrides([ "$classic" ], [], "$core")),
+  'uiShadowedOverrides__template_it_does_not_draw_or_a_layout__not_reported';
+is_deeply [ ui_shadowed_overrides([ "$classic" ], [], "$core/none") ], [],
+  'uiShadowedOverrides__no_views__nothing';
 
-# the real tree: every classic override check runs against share/views-modern
-my %redrawn = map {( $_->[1] => 1 )} modern_shadowed_overrides([ 'share/views' ], [], 'share/views-modern');
+# the real tree: the modern interface redraws these classic pages
+my %redrawn = map {( $_->[1] => 1 )} ui_shadowed_overrides([ 'share/views' ], [], 'share/views-modern');
 ok $redrawn{'device.tt'} && $redrawn{'ajax/device/ports.tt'},
-  'modernShadowedOverrides__share_views_against_share_views_modern__finds_the_pages_modern_redraws';
+  'uiShadowedOverrides__share_views_against_share_views_modern__finds_the_pages_modern_redraws';
 
 # ---- plugin port columns in the modern Ports tab ----
 
-use App::Netdisco::Web::PortsModern qw/server_port_columns port_column_offer/;
+use App::Netdisco::Web::UI::Modern::Ports qw/server_port_columns port_column_offer/;
 
 my %has = map {( $_ => 1 )} 'plugin/xtcol/device_port_column.tt';
 my $has = sub { $has{ shift() } };

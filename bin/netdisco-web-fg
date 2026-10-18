@@ -73,7 +73,15 @@ set plack_middlewares => [
       expires => 'access plus 1 day',
   )],
   [ Static => (
-      path => qr{^/(?:javascripts|css|font|images|modern)/},
+      # and each web interface's own directory, named as the interface is
+      # (web_uis: Modern serves /modern/, X::Mine /mine/)
+      path => do {
+        my @ui = map { (my $n = lc $_) =~ s/^.*:://; quotemeta $n }
+                 grep { defined and not ref }
+                 @{ setting('web_uis') || [] }, @{ setting('extra_web_uis') || [] };
+        my $dirs = join '|', qw/javascripts css font images/, @ui;
+        qr{^/(?:$dirs)/};
+      },
       root => $ENV{DANCER_PUBLIC},
       pass_through => 1,
   )],

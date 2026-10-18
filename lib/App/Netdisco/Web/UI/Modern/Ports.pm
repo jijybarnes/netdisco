@@ -1,12 +1,14 @@
-package App::Netdisco::Web::PortsModern;
+package App::Netdisco::Web::UI::Modern::Ports;
 
 use Dancer ':syntax';
 use Dancer::Plugin::DBIC;
+use Dancer::Plugin::Auth::Extensible;
 
 use JSON::PP ();
 
 use App::Netdisco::Web::Data::Ports 'device_ports';
 use App::Netdisco::Util::Web 'device_display_name';
+use App::Netdisco::Web::UI 'current_web_ui';
 
 use base 'Exporter';
 our @EXPORT_OK = qw/modern_ports_pane port_column_offer port_reasons port_view_defaults short_device_name
@@ -14,17 +16,22 @@ our @EXPORT_OK = qw/modern_ports_pane port_column_offer port_reasons port_view_d
 
 =head1 NAME
 
-App::Netdisco::Web::PortsModern - the device Ports tab in the modern interface
+App::Netdisco::Web::UI::Modern::Ports - the device Ports tab in the modern interface
 
 =head1 DESCRIPTION
 
-The classic route, C</ajax/content/device/ports>, hands over to this when the
-browser uses the modern interface. The route is kept rather than given a twin
-because its address is what the pane machinery keys on: the CSV link, the page
-title and the address bar all follow from it (see C<pane_chrome>).
+The tab keeps the classic tab's address, C</ajax/content/device/ports>,
+because that address is what the pane machinery keys on: the CSV link, the
+page title and the address bar all follow from it (see C<pane_chrome>). The
+route here is registered before the classic one (the interface is loaded
+before the web plugins) and passes the request on to it unless the browser
+uses the modern interface, so the classic route is not touched. With
+C<route_cache> on, the path is cached to this route, which decides again on
+every request.
 
 The pane itself is a shell: F<share/public/modern/js/ports.js> reads the ports
-from API v2 and draws the front panel and the table in the browser. The CSV
+from L<App::Netdisco::Web::UI::Modern::Data> and draws the front panel and the
+table in the browser. The CSV
 download, which is the same address without XMLHttpRequest, is written here
 from the same normalized ports.
 
@@ -179,5 +186,10 @@ sub modern_ports_pane {
     rows_by_port => (@extra ? { map {( $_->port => $_ )} @{ _template_rows($device) } } : {}),
   }, { layout => 'noop' };
 }
+
+get '/ajax/content/device/ports' => require_login sub {
+  pass unless current_web_ui() eq 'modern';
+  return modern_ports_pane();
+};
 
 true;

@@ -1,5 +1,5 @@
 [%# The device Overview tab (App::Netdisco::Web::DeviceOverview). device is
-    the normalized device of API v2 and overview the port counts and the ports
+    the normalized device (App::Netdisco::Web::Data) and overview the port counts and the ports
     that need a look (App::Netdisco::Web::Data::Ports::ports_overview).
 
     A status is always drawn as a shape and a word, never a color alone: the

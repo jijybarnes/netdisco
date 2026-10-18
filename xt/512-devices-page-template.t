@@ -8,7 +8,7 @@ use Template::AutoFilter;
 use File::Spec::Functions qw/catfile updir/;
 use FindBin;
 
-# The Devices page (App::Netdisco::Web::DevicesPage): its template, rendered
+# The Devices page (App::Netdisco::Web::UI::Modern::DevicesPage): its template, rendered
 # with the overlay in front of share/views as the app arranges it (see xt/143),
 # and the one decision its route makes, read from the source because a page
 # request needs a database (see xt/145).
@@ -35,7 +35,7 @@ like $layout, qr{\[% IF page_devices %\]<script type="module" src="[^"]*/modern/
 
 my $src = do {
   local $/;
-  open my $fh, '<', catfile($FindBin::Bin, updir(), qw/lib App Netdisco Web DevicesPage.pm/) or die $!;
+  open my $fh, '<', catfile($FindBin::Bin, updir(), qw/lib App Netdisco Web UI Modern DevicesPage.pm/) or die $!;
   <$fh>;
 };
 like $src, qr{return redirect uri_for\('/inventory'\)->path\s+unless current_web_ui\(\) eq 'modern';},

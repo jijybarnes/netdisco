@@ -4,10 +4,9 @@ use Dancer ':syntax';
 use Dancer::Plugin::DBIC;
 use Dancer::Plugin::Auth::Extensible;
 
-use App::Netdisco::Util::Port qw/port_acl_service port_acl_pvid port_acl_name hidden_device_ports/;
+use App::Netdisco::Util::Permission 'acl_matches';
+use App::Netdisco::Util::Port qw/port_acl_service port_acl_pvid port_acl_name/;
 use App::Netdisco::Web::Plugin;
-use App::Netdisco::Web::UI 'current_web_ui';
-use App::Netdisco::Web::PortsModern 'modern_ports_pane';
 
 use List::MoreUtils 'singleton';
 use NetAddr::MAC ();
@@ -316,9 +315,6 @@ sub _threshold_scope {
 
 # device ports with a description (er, name) matching
 get '/ajax/content/device/ports' => require_login sub {
-    # the modern interface draws this tab from API v2 in the browser
-    return modern_ports_pane() if current_web_ui() eq 'modern';
-
     my $q = param('q');
     my $prefer = param('prefer');
     $prefer = ''
@@ -569,8 +565,33 @@ get '/ajax/content/device/ports' => require_login sub {
 
     # filter out hidden ones
     if (not param('p_include_hidden')) {
-        my $to_hide = hidden_device_ports($device, \@results);
-        @results = grep { ! exists $to_hide->{$_->port} } @results;
+        my $port_map = {};
+        my %to_hide  = ();
+
+        map { push @{ $port_map->{$_->port} }, $_ }
+             grep { $_->port }
+             @results;
+
+        map { push @{ $port_map->{$_->port} }, $_ }
+            grep { $_->port }
+            $device->device_ips()->all;
+
+        foreach my $map (@{ setting('hide_deviceports')}) {
+            next unless ref {} eq ref $map;
+
+            foreach my $key (sort keys %$map) {
+                # lhs matches device, rhs matches port
+                next unless $key and $map->{$key};
+                next unless acl_matches($device, $key);
+
+                foreach my $port (sort keys %$port_map) {
+                    next unless acl_matches($port_map->{$port}, $map->{$key});
+                    ++$to_hide{$port};
+                }
+            }
+        }
+
+        @results = grep { ! exists $to_hide{$_->port} } @results;
     }
 
     # empty set would be a 'no records' msg

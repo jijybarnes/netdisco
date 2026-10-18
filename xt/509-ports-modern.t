@@ -9,7 +9,7 @@ use Template::AutoFilter;
 use File::Spec::Functions qw/catfile updir/;
 use FindBin;
 
-use App::Netdisco::Web::PortsModern qw/port_column_offer port_view_defaults short_device_name/;
+use App::Netdisco::Web::UI::Modern::Ports qw/port_column_offer port_view_defaults short_device_name/;
 
 # The modern Ports tab: the classic route hands over to it, it renders a shell
 # that ports.js fills from API v2, and it writes the CSV download itself.
@@ -121,20 +121,29 @@ like $lines[1], qr/,"10 20",6400,2,/, 'portsCsv__vlans_poe_and_nodes__as_values'
 like $lines[2], qr/^Te1\/1\/1,blocking,.*,10\.0\.0\.2,Te2\/0\/12,core-b,/,
   'portsCsv__neighbor_without_dns__named_by_its_id';
 
-# ---- the classic route hands over first ----
+# ---- the modern route goes in front of the classic one ----
 
-# The route reads the database, which a test cannot have (xt/36), so this is a
-# source assertion: the hand-over must come before anything the classic route
-# does, or a modern browser would pay for the classic query and get its pane.
-my $src = do {
+# The routes read the database, which a test cannot have (xt/36), so these are
+# source assertions; xt/156 checks the mechanism itself, request by request.
+# The classic route is the interface's business no more than any other core
+# route: it must not know there is one.
+sub source_of {
   local $/;
-  open my $fh, '<', catfile($FindBin::Bin, updir(), qw/lib App Netdisco Web Plugin Device Ports.pm/) or die $!;
-  <$fh>;
-};
-my ($body) = $src =~ m{^get '/ajax/content/device/ports' => require_login sub \{\n(.*?)^\};$}ms;
-ok defined $body, 'portsRoute__found_in_the_source';
+  open my $fh, '<', catfile($FindBin::Bin, updir(), 'lib', @_) or die $!;
+  return scalar <$fh>;
+}
+my $classic = source_of(qw/App Netdisco Web Plugin Device Ports.pm/);
+unlike $classic, qr/modern|current_web_ui|App::Netdisco::Web::UI/,
+  'portsRoute__classic__knows_no_web_interface';
+
+# The modern one is the same path, signed in as the classic one is, and its
+# first statement hands any other interface's request on, before it does
+# anything of its own: a classic browser must not pay for the modern pane.
+my $modern = source_of(qw/App Netdisco Web UI Modern Ports.pm/);
+my ($body) = $modern =~ m{^get '/ajax/content/device/ports' => require_login sub \{\n(.*?)^\};$}ms;
+ok defined $body, 'portsRoute__modern__registered_for_the_same_path';
 my ($first) = grep { /\S/ and !/^\s*#/ } split /\n/, ($body // '');
-like $first, qr/^\s*return modern_ports_pane\(\) if current_web_ui\(\) eq 'modern';$/,
-  'portsRoute__first_statement__hands_a_modern_browser_over';
+like $first, qr/^\s*pass unless current_web_ui\(\) eq 'modern';$/,
+  'portsRoute__modern_first_statement__passes_any_other_interface_on';
 
 done_testing;
