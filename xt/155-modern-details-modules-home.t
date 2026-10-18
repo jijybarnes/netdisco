@@ -9,7 +9,7 @@ use File::Path 'make_path';
 use File::Spec::Functions 'catfile';
 use Template::AutoFilter;
 
-use App::Netdisco::Web::Data::Summary 'normalize_statistics';
+use App::Netdisco::Web::UI::Modern::Data::Summary 'normalize_statistics';
 
 # The modern Details and Modules tabs and the modern home page. Their routes
 # are the classic ones, and so are the scripts that drive them (netdisco.js,

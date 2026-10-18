@@ -1,17 +1,17 @@
-package App::Netdisco::Web::Data::Summary;
+package App::Netdisco::Web::UI::Modern::Data::Summary;
 
 use strict;
 use warnings;
 
-use App::Netdisco::Web::Data qw/iso8601_sql/;
-use App::Netdisco::Web::Data::Devices 'list_devices';
+use App::Netdisco::Web::UI::Modern::Data qw/iso8601_sql/;
+use App::Netdisco::Web::UI::Modern::Data::Devices 'list_devices';
 
 use base 'Exporter';
 our @EXPORT_OK = qw/network_summary normalize_statistics STALE_DAYS/;
 
 =head1 NAME
 
-App::Netdisco::Web::Data::Summary - the network at a glance, normalized
+App::Netdisco::Web::UI::Modern::Data::Summary - the network at a glance, normalized
 
 =head1 DESCRIPTION
 

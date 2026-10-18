@@ -7,9 +7,9 @@ use Test::More 0.88;
 use JSON::PP ();
 use Scalar::Util 'blessed';
 
-use App::Netdisco::Web::Data qw/speed_to_bps layers_list iso8601_sql json_bool/;
-use App::Netdisco::Web::Data::Device 'normalize_device';
-use App::Netdisco::Web::Data::Ports qw/port_status normalize_port normalize_node normalize_control
+use App::Netdisco::Web::UI::Modern::Data qw/speed_to_bps layers_list iso8601_sql json_bool/;
+use App::Netdisco::Web::UI::Modern::Data::Device 'normalize_device';
+use App::Netdisco::Web::UI::Modern::Data::Ports qw/port_status normalize_port normalize_node normalize_control
                                        normalize_vlan normalize_log_entry free_interval/;
 
 # The v2 shapes are the contract both the API and the modern interface read,

@@ -7,7 +7,7 @@ use Dancer::Plugin::Auth::Extensible;
 use JSON::PP ();
 
 use App::Netdisco::Web::UI 'current_web_ui';
-use App::Netdisco::Web::Data::Device 'device_summary';
+use App::Netdisco::Web::UI::Modern::Data::Device 'device_summary';
 
 use base 'Exporter';
 our @EXPORT_OK = qw/device_tab_for page_segments nav_for crumbs_for palette_index/;

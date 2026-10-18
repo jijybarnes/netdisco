@@ -40,9 +40,13 @@ The list of devices, C</devices>.
 
 The network at a glance on the home page.
 
-=item L<App::Netdisco::Web::UI::Modern::Data>
+=item L<App::Netdisco::Web::UI::Modern::DataRoutes>
 
 The data its scripts read, at C</ajax/data/v2/...>.
+
+=item L<App::Netdisco::Web::UI::Modern::Data>
+
+That data, read from the database and normalized, for the modules above.
 
 =back
 
@@ -59,7 +63,7 @@ use App::Netdisco::Web::UI::Modern::Shell;
 use App::Netdisco::Web::UI::Modern::Overview;
 use App::Netdisco::Web::UI::Modern::DevicesPage;
 use App::Netdisco::Web::UI::Modern::Home;
-use App::Netdisco::Web::UI::Modern::Data;
+use App::Netdisco::Web::UI::Modern::DataRoutes;
 use App::Netdisco::Web::UI::Modern::Ports;
 
 true;

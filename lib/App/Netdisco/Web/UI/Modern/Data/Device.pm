@@ -1,17 +1,17 @@
-package App::Netdisco::Web::Data::Device;
+package App::Netdisco::Web::UI::Modern::Data::Device;
 
 use strict;
 use warnings;
 
 use JSON::PP ();
-use App::Netdisco::Web::Data qw/problem json_bool iso8601_sql layers_list/;
+use App::Netdisco::Web::UI::Modern::Data qw/problem json_bool iso8601_sql layers_list/;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/find_device device_summary normalize_device normalize_poe normalize_health normalize_counts/;
 
 =head1 NAME
 
-App::Netdisco::Web::Data::Device - one device, normalized
+App::Netdisco::Web::UI::Modern::Data::Device - one device, normalized
 
 =head1 FUNCTIONS
 
@@ -41,7 +41,7 @@ my @TIMES = (
 =head2 device_summary( $schema, $device )
 
 The device as the modern interface reads it, read again with its times rendered by the
-database (see L<App::Netdisco::Web::Data/iso8601_sql>).
+database (see L<App::Netdisco::Web::UI::Modern::Data/iso8601_sql>).
 
 =cut
 

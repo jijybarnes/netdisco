@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More 0.88;
 
-use App::Netdisco::Web::Data::Search qw/classify_query like_pattern normalize_node_hit/;
+use App::Netdisco::Web::UI::Modern::Data::Search qw/classify_query like_pattern normalize_node_hit/;
 use App::Netdisco::Web::UI::Modern::Shell 'palette_index';
 
 # The command palette: what GET /ajax/data/v2/search takes the typed text to be, and

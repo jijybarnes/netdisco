@@ -1,11 +1,11 @@
-package App::Netdisco::Web::Data::Ports;
+package App::Netdisco::Web::UI::Modern::Data::Ports;
 
 use strict;
 use warnings;
 
 use JSON::PP ();
 use App::Netdisco::Util::Permission 'acl_matches';
-use App::Netdisco::Web::Data qw/problem json_bool iso8601_sql speed_to_bps/;
+use App::Netdisco::Web::UI::Modern::Data qw/problem json_bool iso8601_sql speed_to_bps/;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/
@@ -17,7 +17,7 @@ our @EXPORT_OK = qw/
 
 =head1 NAME
 
-App::Netdisco::Web::Data::Ports - a device's ports and their nodes, normalized
+App::Netdisco::Web::UI::Modern::Data::Ports - a device's ports and their nodes, normalized
 
 =head1 FUNCTIONS
 

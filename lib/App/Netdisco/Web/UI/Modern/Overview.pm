@@ -7,8 +7,8 @@ use Dancer::Plugin::Auth::Extensible;
 
 use App::Netdisco::Web::Plugin;
 use App::Netdisco::Web::UI 'current_web_ui';
-use App::Netdisco::Web::Data::Device 'device_summary';
-use App::Netdisco::Web::Data::Ports qw/device_ports ports_overview/;
+use App::Netdisco::Web::UI::Modern::Data::Device 'device_summary';
+use App::Netdisco::Web::UI::Modern::Data::Ports qw/device_ports ports_overview/;
 
 =head1 NAME
 
