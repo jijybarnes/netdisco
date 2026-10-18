@@ -5,7 +5,7 @@ use Dancer::Plugin::DBIC;
 
 use App::Netdisco::Web::UI 'current_web_ui';
 use App::Netdisco::Web::UI::Modern::Shell 'page_segments';
-use App::Netdisco::Web::Data::Summary 'network_summary';
+use App::Netdisco::Web::UI::Modern::Data::Summary 'network_summary';
 
 =head1 NAME
 

@@ -1,17 +1,17 @@
-package App::Netdisco::Web::Data::Search;
+package App::Netdisco::Web::UI::Modern::Data::Search;
 
 use strict;
 use warnings;
 
-use App::Netdisco::Web::Data qw/iso8601_sql json_bool/;
-use App::Netdisco::Web::Data::Devices 'list_devices';
+use App::Netdisco::Web::UI::Modern::Data qw/iso8601_sql json_bool/;
+use App::Netdisco::Web::UI::Modern::Data::Devices 'list_devices';
 
 use base 'Exporter';
 our @EXPORT_OK = qw/classify_query like_pattern quick_search normalize_node_hit QUICK_LIMIT/;
 
 =head1 NAME
 
-App::Netdisco::Web::Data::Search - a few of everything that matches, at once
+App::Netdisco::Web::UI::Modern::Data::Search - a few of everything that matches, at once
 
 =head1 DESCRIPTION
 

@@ -6,7 +6,7 @@ use Dancer::Plugin::Auth::Extensible;
 
 use JSON::PP ();
 
-use App::Netdisco::Web::Data::Ports 'device_ports';
+use App::Netdisco::Web::UI::Modern::Data::Ports 'device_ports';
 use App::Netdisco::Util::Web 'device_display_name';
 use App::Netdisco::Web::UI 'current_web_ui';
 
@@ -30,7 +30,7 @@ C<route_cache> on, the path is cached to this route, which decides again on
 every request.
 
 The pane itself is a shell: F<share/public/modern/js/ports.js> reads the ports
-from L<App::Netdisco::Web::UI::Modern::Data> and draws the front panel and the
+from L<App::Netdisco::Web::UI::Modern::DataRoutes> and draws the front panel and the
 table in the browser. The CSV
 download, which is the same address without XMLHttpRequest, is written here
 from the same normalized ports.

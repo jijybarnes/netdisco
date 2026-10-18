@@ -39,6 +39,9 @@ ok !App::Netdisco::Web::UI::valid_web_ui('modern'), 'noWebUis__modern__not_an_in
 is Dancer::Config::setting('_default_web_ui'), 'classic',
   'noWebUis__default_naming_modern__falls_back_to_classic';
 ok !$INC{'App/Netdisco/Web/UI/Modern.pm'}, 'noWebUis__modern_module__not_loaded';
+# the normalized data is the modern interface's own: the core reads none of it
+is_deeply [ grep { m{^App/Netdisco/Web/(?:UI/Modern|Data)\b} } keys %INC ], [],
+  'noWebUis__modern_data_library__not_loaded';
 
 my @routes = map { @{ Dancer::App->current->registry->routes($_) || [] } } qw/get post/;
 is scalar(grep { "$_->{pattern}" =~ m{/ajax/data/v2} } @routes), 0, 'noWebUis__no_data_route';

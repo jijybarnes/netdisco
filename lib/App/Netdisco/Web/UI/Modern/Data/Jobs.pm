@@ -1,16 +1,16 @@
-package App::Netdisco::Web::Data::Jobs;
+package App::Netdisco::Web::UI::Modern::Data::Jobs;
 
 use strict;
 use warnings;
 
-use App::Netdisco::Web::Data qw/iso8601_sql/;
+use App::Netdisco::Web::UI::Modern::Data qw/iso8601_sql/;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/my_jobs normalize_job job_state/;
 
 =head1 NAME
 
-App::Netdisco::Web::Data::Jobs - the signed in user's own jobs, normalized
+App::Netdisco::Web::UI::Modern::Data::Jobs - the signed in user's own jobs, normalized
 
 =head1 DESCRIPTION
 

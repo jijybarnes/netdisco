@@ -1,16 +1,16 @@
-package App::Netdisco::Web::Data::Devices;
+package App::Netdisco::Web::UI::Modern::Data::Devices;
 
 use strict;
 use warnings;
 
-use App::Netdisco::Web::Data qw/iso8601_sql/;
+use App::Netdisco::Web::UI::Modern::Data qw/iso8601_sql/;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/list_devices normalize_device_row clamp_limit sort_spec word_conditions DEVICE_SORTS/;
 
 =head1 NAME
 
-App::Netdisco::Web::Data::Devices - the list of devices, normalized
+App::Netdisco::Web::UI::Modern::Data::Devices - the list of devices, normalized
 
 =head1 DESCRIPTION
 
@@ -67,7 +67,7 @@ sub _str { my $v = shift; (defined $v and length $v) ? "$v" : undef }
 
 Pure: one device's columns (with the C<_iso_*> times) to the list's row.
 C<$failing> is true when the device has connection failures recorded (see
-L<App::Netdisco::Web::Data::Device/normalize_health>).
+L<App::Netdisco::Web::UI::Modern::Data::Device/normalize_health>).
 
 =cut
 

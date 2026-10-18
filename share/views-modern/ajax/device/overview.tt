@@ -1,6 +1,6 @@
-[%# The device Overview tab (App::Netdisco::Web::DeviceOverview). device is
-    the normalized device (App::Netdisco::Web::Data) and overview the port counts and the ports
-    that need a look (App::Netdisco::Web::Data::Ports::ports_overview).
+[%# The device Overview tab (App::Netdisco::Web::UI::Modern::Overview). device
+    is the normalized device (UI::Modern::Data) and overview the port counts
+    and the ports that need a look (UI::Modern::Data::Ports::ports_overview).
 
     A status is always drawn as a shape and a word, never a color alone: the
     shapes are the ones the legend and the ports table use. -%]

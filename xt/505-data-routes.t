@@ -8,7 +8,7 @@ use JSON::PP ();
 
 # The data the modern interface's scripts read: one handler per resource,
 # served at /ajax/data/v2/... to a signed in XMLHttpRequest only, and nowhere
-# else. These are the interface's own (App::Netdisco::Web::UI::Modern::Data),
+# else. These are the interface's own (App::Netdisco::Web::UI::Modern::DataRoutes),
 # not an API: no /api/v2 route, nothing in the Swagger document.
 #
 # The real routes all read the database, which a test cannot have (xt/36), so
@@ -23,8 +23,8 @@ BEGIN { $ENV{DANCER_ENVIRONMENT} = 'testing' }
 
 use App::Netdisco;
 use App::Netdisco::Web;
-use App::Netdisco::Web::Data 'problem';
-use App::Netdisco::Web::UI::Modern::Data 'data_route';
+use App::Netdisco::Web::UI::Modern::Data 'problem';
+use App::Netdisco::Web::UI::Modern::DataRoutes 'data_route';
 use Dancer qw/:syntax :tests/;
 use Dancer::Test;
 

@@ -6,8 +6,8 @@ use warnings;
 use Test::More 0.88;
 
 use App::Netdisco::Web::UI::Modern::Shell 'device_tab_for';
-use App::Netdisco::Web::Data::Device 'normalize_poe';
-use App::Netdisco::Web::Data::Ports 'ports_overview';
+use App::Netdisco::Web::UI::Modern::Data::Device 'normalize_poe';
+use App::Netdisco::Web::UI::Modern::Data::Ports 'ports_overview';
 
 # What the modern device page's Overview tab is built from. Pure, so pinned
 # without a database (xt/36).

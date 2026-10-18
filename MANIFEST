@@ -182,13 +182,6 @@ lib/App/Netdisco/Web/API/User.pm
 lib/App/Netdisco/Web/Auth/Provider/DBIC.pm
 lib/App/Netdisco/Web/AuthN.pm
 lib/App/Netdisco/Web/CustomFields.pm
-lib/App/Netdisco/Web/Data.pm
-lib/App/Netdisco/Web/Data/Device.pm
-lib/App/Netdisco/Web/Data/Devices.pm
-lib/App/Netdisco/Web/Data/Jobs.pm
-lib/App/Netdisco/Web/Data/Ports.pm
-lib/App/Netdisco/Web/Data/Search.pm
-lib/App/Netdisco/Web/Data/Summary.pm
 lib/App/Netdisco/Web/Device.pm
 lib/App/Netdisco/Web/GenericReport.pm
 lib/App/Netdisco/Web/Health.pm
@@ -258,6 +251,13 @@ lib/App/Netdisco/Web/TypeAhead.pm
 lib/App/Netdisco/Web/UI.pm
 lib/App/Netdisco/Web/UI/Modern.pm
 lib/App/Netdisco/Web/UI/Modern/Data.pm
+lib/App/Netdisco/Web/UI/Modern/Data/Device.pm
+lib/App/Netdisco/Web/UI/Modern/Data/Devices.pm
+lib/App/Netdisco/Web/UI/Modern/Data/Jobs.pm
+lib/App/Netdisco/Web/UI/Modern/Data/Ports.pm
+lib/App/Netdisco/Web/UI/Modern/Data/Search.pm
+lib/App/Netdisco/Web/UI/Modern/Data/Summary.pm
+lib/App/Netdisco/Web/UI/Modern/DataRoutes.pm
 lib/App/Netdisco/Web/UI/Modern/DevicesPage.pm
 lib/App/Netdisco/Web/UI/Modern/Home.pm
 lib/App/Netdisco/Web/UI/Modern/Overview.pm
