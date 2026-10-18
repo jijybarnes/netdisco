@@ -1,14 +1,15 @@
-package App::Netdisco::Web::HomePage;
+package App::Netdisco::Web::UI::Modern::Home;
 
 use Dancer ':syntax';
 use Dancer::Plugin::DBIC;
 
-use App::Netdisco::Web::UI qw/current_web_ui page_segments/;
+use App::Netdisco::Web::UI 'current_web_ui';
+use App::Netdisco::Web::UI::Modern::Shell 'page_segments';
 use App::Netdisco::Web::Data::Summary 'network_summary';
 
 =head1 NAME
 
-App::Netdisco::Web::HomePage - the home page, in the modern interface
+App::Netdisco::Web::UI::Modern::Home - the home page, in the modern interface
 
 =head1 DESCRIPTION
 
@@ -16,7 +17,7 @@ The home page is the classic route's (C</>, in App::Netdisco::Web::AuthN),
 and so is everything it offers: signing in, the search, the admin's discover
 form, the System Information panel. The modern interface's F<index.tt> adds
 the network at a glance, which this hands it as C<nd2_home>: the same figures
-as C<GET /api/v2/summary>, and which of the reports they point to are there
+as C<GET /ajax/data/v2/summary>, and which of the reports they point to are there
 (a site may leave any out of C<web_plugins>).
 
 =cut

@@ -15,7 +15,7 @@ our @EXPORT_OK = qw/
   port_acl_check port_acl_by_role_check device_acl_by_role_check
   get_port get_iid get_powerid
   is_vlan_subinterface port_has_phone port_has_wap
-  to_speed hidden_device_ports
+  to_speed
 /;
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
@@ -429,56 +429,6 @@ sub to_speed {
   return $speed if $speed =~ m/\D/;
   ($speed = munge_highspeed($speed / 1_000_000)) =~ s/\.0 ?//g;
   return $speed;
-}
-
-
-=head2 hidden_device_ports( $device, \@ports )
-
-The names of the ports in C<@ports> that the C<hide_deviceports> setting hides
-on C<$device>, as the keys of a hash ref.
-
-Each rule's left side is matched against the device and its right side against
-the port, where "the port" is every row carrying that name: the C<device_port>
-row itself and any C<device_ip> row (an interface address) on the same port,
-matched together. A bare IP in the rule is compared with the first of those
-rows that has an address, which is the port row and so the device's own IP;
-the C<device_ip> rows count through their named properties, such as
-C<alias:...>.
-
-Shared by the classic Ports tab and the v2 API so that both hide the same
-ports.
-
-=cut
-
-sub hidden_device_ports {
-  my ($device, $ports) = @_;
-  my $port_map = {};
-  my %to_hide  = ();
-
-  map { push @{ $port_map->{$_->port} }, $_ }
-       grep { $_->port }
-       @$ports;
-
-  map { push @{ $port_map->{$_->port} }, $_ }
-      grep { $_->port }
-      $device->device_ips()->all;
-
-  foreach my $map (@{ setting('hide_deviceports') || [] }) {
-      next unless ref {} eq ref $map;
-
-      foreach my $key (sort keys %$map) {
-          # lhs matches device, rhs matches port
-          next unless $key and $map->{$key};
-          next unless acl_matches($device, $key);
-
-          foreach my $port (sort keys %$port_map) {
-              next unless acl_matches($port_map->{$port}, $map->{$key});
-              ++$to_hide{$port};
-          }
-      }
-  }
-
-  return \%to_hide;
 }
 
 1;

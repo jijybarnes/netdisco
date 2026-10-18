@@ -150,15 +150,14 @@ use App::Netdisco::Web::Theme;
 use App::Netdisco::Web::UI;
 use App::Netdisco::Web::Search;
 use App::Netdisco::Web::Device;
-use App::Netdisco::Web::DeviceOverview;
-use App::Netdisco::Web::DevicesPage;
-use App::Netdisco::Web::HomePage;
+# the web interfaces other than classic (web_uis), before the web plugins: an
+# interface may answer a path in front of a plugin's route (App::Netdisco::Web::UI)
+BEGIN { App::Netdisco::Web::UI::load_web_uis() }
 use App::Netdisco::Web::Report;
 use App::Netdisco::Web::API::Objects;
 use App::Netdisco::Web::API::Queue;
 use App::Netdisco::Web::API::Statistics;
 use App::Netdisco::Web::API::User;
-use App::Netdisco::Web::API::V2;
 use App::Netdisco::Web::Health;
 use App::Netdisco::Web::Metrics;
 use App::Netdisco::Web::AdminTask;
@@ -249,34 +248,9 @@ if (setting('template_paths') and ref [] eq ref setting('template_paths')) {
       @{setting('template_paths')};
 }
 
-# The web interface overlay (App::Netdisco::Web::UI) sits in front of all of
-# the above, and is empty for the classic interface. For the modern one it is
-# the site's and the plugins' views-modern, then the core's: a template the
-# modern interface draws itself is drawn from other data than the classic one,
-# so a classic override of it could only break the page. Every other template
-# falls through to the chain above, site first, as it always has.
-{
-  my @site = (setting('template_paths') and ref [] eq ref setting('template_paths'))
-    ? @{ setting('template_paths') } : ();
-  my @site_modern = App::Netdisco::Web::UI::modern_dirs_for(@site);
-  setting('_ui_override_paths' => [ @site_modern, @{ setting('_plugin_modern_template_paths') || [] } ]);
-
-  unshift @{ config->{engines}->{netdisco_template_toolkit}->{INCLUDE_PATH} },
-    \&App::Netdisco::Web::UI::ui_include_paths;
-
-  # said once at startup rather than left to be found by a user of the
-  # modern interface wondering where the site's change went
-  foreach my $s (App::Netdisco::Web::UI::modern_shadowed_overrides(
-      [ @site, @{ setting('_plugin_template_paths') || [] } ],
-      setting('_ui_override_paths'),
-      dir(setting('views'))->parent->subdir('views-modern')->stringify)) {
-    warning sprintf
-      '%s overrides %s, which the modern interface draws itself: browsers using the'
-      . ' modern interface do not see this override. Copy it to a views-modern'
-      . ' directory beside it and adapt it to change the modern page too.',
-      $s->[0], $s->[1];
-  }
-}
+# the web interfaces' templates in front of all of the above (App::Netdisco::Web::UI)
+App::Netdisco::Web::UI::setup_web_uis(
+  (setting('template_paths') and ref [] eq ref setting('template_paths')) ? setting('template_paths') : []);
 
 # here rather than earlier because template_paths is only resolved above
 foreach my $finding (scan_shadowed_files(
@@ -601,8 +575,6 @@ $swagger_doc->{tags} = [
     description => 'Search Operations'},
   {name => 'Objects',
     description => 'Device, Port, and associated Node Data'},
-  {name => 'Objects v2',
-    description => 'Normalized Device, Port, and Node Data (also what the modern web interface reads)'},
   {name => 'Reports',
     description => 'Canned and Custom Reports'},
   {name => 'Queue',

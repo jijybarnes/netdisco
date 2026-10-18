@@ -14,7 +14,7 @@ BEGIN { $ENV{DANCER_ENVIRONMENT} = 'testing' }
 
 use App::Netdisco;
 use Dancer qw/:syntax :script/;
-use App::Netdisco::Util::Port 'hidden_device_ports';
+use App::Netdisco::Web::Data::Ports 'hidden_device_ports';
 
 {
   package XtRow;

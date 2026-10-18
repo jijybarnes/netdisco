@@ -15,7 +15,7 @@ App::Netdisco::Web::Data::Summary - the network at a glance, normalized
 
 =head1 DESCRIPTION
 
-What the modern interface's home page shows, and what C<GET /api/v2/summary>
+What the modern interface's home page shows, and what C<GET /ajax/data/v2/summary>
 returns: how many devices, ports and nodes there are, what needs a look, and
 how the job queue is doing.
 

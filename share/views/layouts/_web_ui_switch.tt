@@ -1,8 +1,12 @@
-[%# The button that moves this browser to the other web interface. Shared by
-    both layouts, so it lives with the classic views that the modern overlay
-    falls back to. The same URL works in either interface, so the switch
-    returns to the page it was pressed on, which the route reads from the
-    Referer header rather than from a field here (see back_from_referer). -%]
+[%# The button that moves this browser to another web interface: target is
+    its name, label and title what an interface registered for the classic
+    menu (App::Netdisco::Web::UI). Shared by every layout, so it lives with the
+    classic views that every interface falls back to. The same URL works in
+    any interface, so the switch returns to the page it was pressed on, which
+    the route reads from the Referer header rather than from a field here (see
+    back_from_referer). The classic menu draws one item for each other
+    interface; PRE_CHOMP takes the line break before its loop, so each item
+    starts its own line. -%]
 <form method="post" class="nd_inline-form nd_web-ui-switch" action="[% uri_for('/web_ui') | none %]">
   <input type="hidden" name="ui" value="[% target | html_entity %]">
   [% IF target == 'classic' %]
@@ -10,6 +14,6 @@
     <i class="fas fa-clock-rotate-left"></i><span class="nd2-hide-sm">Classic UI</span>
   </button>
   [% ELSE %]
-  <button type="submit" class="dropdown-item" title="Switch this browser to the new interface">Try the new interface</button>
+  <button type="submit" class="dropdown-item" title="[% title | html_entity %]">[% label | html_entity %]</button>
   [% END %]
 </form>

@@ -6,7 +6,7 @@ use warnings;
 use Test::More 0.88;
 use JSON::PP ();
 
-use App::Netdisco::Web::UI qw/page_segments nav_for crumbs_for/;
+use App::Netdisco::Web::UI::Modern::Shell qw/page_segments nav_for crumbs_for/;
 use App::Netdisco::Web::Data::Device qw/normalize_health normalize_counts/;
 use App::Netdisco::Web::Data::Ports 'normalize_last_node';
 use App::Netdisco::Web::Data::Devices qw/clamp_limit sort_spec normalize_device_row word_conditions DEVICE_SORTS/;

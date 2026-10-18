@@ -16,7 +16,7 @@ App::Netdisco::Web::Data::Search - a few of everything that matches, at once
 =head1 DESCRIPTION
 
 What the modern interface's command palette asks as the user types, and what
-C<GET /api/v2/search> returns: the first few devices, nodes, port descriptions
+C<GET /ajax/data/v2/search> returns: the first few devices, nodes, port descriptions
 and VLANs that match some text. Each kind is one small query, cut short in the
 database. It finds things to go to; the classic search, which the palette
 offers for the same text, is where everything that matches is listed.

@@ -40,7 +40,7 @@ my @TIMES = (
 
 =head2 device_summary( $schema, $device )
 
-The device as the v2 API returns it, read again with its times rendered by the
+The device as the modern interface reads it, read again with its times rendered by the
 database (see L<App::Netdisco::Web::Data/iso8601_sql>).
 
 =cut

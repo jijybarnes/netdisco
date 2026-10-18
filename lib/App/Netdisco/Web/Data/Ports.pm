@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use JSON::PP ();
-use App::Netdisco::Util::Port 'hidden_device_ports';
+use App::Netdisco::Util::Permission 'acl_matches';
 use App::Netdisco::Web::Data qw/problem json_bool iso8601_sql speed_to_bps/;
 
 use base 'Exporter';
@@ -12,6 +12,7 @@ our @EXPORT_OK = qw/
   device_ports device_port port_nodes
   normalize_port normalize_node port_status ports_overview normalize_control normalize_last_node
   normalize_vlan normalize_log_entry device_vlans port_log free_interval
+  hidden_device_ports
 /;
 
 =head1 NAME
@@ -19,6 +20,57 @@ our @EXPORT_OK = qw/
 App::Netdisco::Web::Data::Ports - a device's ports and their nodes, normalized
 
 =head1 FUNCTIONS
+
+=head2 hidden_device_ports( $device, \@ports )
+
+The names of the ports in C<@ports> that the C<hide_deviceports> setting hides
+on C<$device>, as the keys of a hash ref.
+
+Each rule's left side is matched against the device and its right side against
+the port, where "the port" is every row carrying that name: the C<device_port>
+row itself and any C<device_ip> row (an interface address) on the same port,
+matched together. A bare IP in the rule is compared with the first of those
+rows that has an address, which is the port row and so the device's own IP;
+the C<device_ip> rows count through their named properties, such as
+C<alias:...>.
+
+The classic Ports tab (App::Netdisco::Web::Plugin::Device::Ports) applies the
+same rule in its own words; this is the data layer's copy, kept in step with
+it, so that both interfaces hide the same ports without the classic route
+being touched.
+
+=cut
+
+sub hidden_device_ports {
+  my ($device, $ports) = @_;
+  my $port_map = {};
+  my %to_hide  = ();
+
+  map { push @{ $port_map->{$_->port} }, $_ }
+       grep { $_->port }
+       @$ports;
+
+  map { push @{ $port_map->{$_->port} }, $_ }
+      grep { $_->port }
+      $device->device_ips()->all;
+
+  foreach my $map (@{ Dancer::setting('hide_deviceports') || [] }) {
+      next unless ref {} eq ref $map;
+
+      foreach my $key (sort keys %$map) {
+          # lhs matches device, rhs matches port
+          next unless $key and $map->{$key};
+          next unless acl_matches($device, $key);
+
+          foreach my $port (sort keys %$port_map) {
+              next unless acl_matches($port_map->{$port}, $map->{$key});
+              ++$to_hide{$port};
+          }
+      }
+  }
+
+  return \%to_hide;
+}
 
 =head2 port_status( \%columns, $vlan_count )
 

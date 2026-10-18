@@ -188,7 +188,8 @@
           <li><a class="dropdown-item" href="[% uri_for('/password') | none %]">Change Password</a></li>
         [% END %]
           <li><a class="dropdown-item" href="[% uri_for('/swagger-ui') | none %]" target="_blank">👉 Browse the API</a></li>
-          <li>[% INCLUDE 'layouts/_web_ui_switch.tt' target = 'modern' %]</li>
+          [% FOREACH ui IN web_uis %]
+          <li>[% INCLUDE 'layouts/_web_ui_switch.tt' target = ui.name label = ui.switch_label title = ui.switch_title %]</li>[% END %]
         [% IF user_has_role('admin') %]
           <li><a class="dropdown-item" href="https://github.com/netdisco/netdisco/wiki/Configuration" target="_blank">⚙️ Configuration Reference</a></li>
           <li><a class="dropdown-item" href="https://github.com/sponsors/netdisco" target="_blank">💜 Become a Sponsor</a></li>

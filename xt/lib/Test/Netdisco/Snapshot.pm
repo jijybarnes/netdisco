@@ -151,7 +151,8 @@ categories with two of them populated, so the empty-category branch renders
 too, and one of the three reports hidden, as C<portlog> is in production; and
 an admin list holding a task, a divider and a second task. Tags and labels are
 the ones the shipped plugins register, so a reader can find each one in
-C<lib/App/Netdisco/Web/Plugin/>.
+C<lib/App/Netdisco/Web/Plugin/>. The account menu's switch to another web
+interface is given the modern one, as the shipped C<web_uis> registers it.
 
 =item C<ajax/device/details.tt>
 
@@ -343,6 +344,12 @@ sub stash_for {
     };
   }
 
+  # the item that moves a browser to another interface, as the classic menu
+  # includes it for the modern one
+  return { target => 'modern', label => 'Try the new interface',
+           title => 'Switch this browser to the new interface' }
+    if $view eq 'layouts/_web_ui_switch.tt';
+
   if ($view eq 'layouts/main.tt') {
     return {
       session => { logged_in_user => 'demo' },
@@ -351,6 +358,11 @@ sub stash_for {
       # marks the one navbar item current, so the two dropdown toggles below
       # supply the same construct in its inactive form
       vars => { nav => 'inventory' },
+      # the other web interfaces the account menu offers to switch to, as
+      # App::Netdisco::Web::UI hands them over with the shipped web_uis
+      web_ui => 'classic',
+      web_uis => [ { name => 'modern', switch_label => 'Try the new interface',
+                     switch_title => 'Switch this browser to the new interface' } ],
       settings => {
         tenant_databases => ['netdisco'],
         tenant_data => { netdisco => { displayname => 'Netdisco' } },

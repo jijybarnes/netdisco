@@ -8,6 +8,8 @@ use File::Temp ();
 use File::Spec::Functions 'catfile';
 
 use App::Netdisco::Web::UI qw/web_ui_names valid_web_ui safe_back_path back_from_referer/;
+# the interface the shipped web_uis loads, which registers itself
+use App::Netdisco::Web::UI::Modern;
 use Dancer::Template::NetdiscoTemplateToolkit;
 
 # The interface is chosen by a cookie the browser sends, so everything that

@@ -1,47 +1,26 @@
 package App::Netdisco::Web::Data;
 
 use Dancer ':syntax';
-use Dancer::Plugin::Ajax;
-use Dancer::Plugin::Auth::Extensible;
-use Dancer::Plugin::Swagger;
 
 use JSON::PP ();
-use Scalar::Util 'blessed';
-use Try::Tiny;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/
-  register_data_route problem json_bool iso8601_sql speed_to_bps layers_list
+  problem json_bool iso8601_sql speed_to_bps layers_list
 /;
 
 =head1 NAME
 
-App::Netdisco::Web::Data - normalized data shared by the API v2 and the web UI
+App::Netdisco::Web::Data - normalized data for the web interfaces
 
 =head1 DESCRIPTION
 
-Each v2 resource is written once, as a code ref returning plain Perl data, and
-served at two addresses:
-
-=over 4
-
-=item C</api/v2/...>
-
-For scripts. Token authentication and the C<api> role, like v1, and listed in
-the Swagger document.
-
-=item C</ajax/data/v2/...>
-
-For the browser. The user's session, and only for an XMLHttpRequest: the
-C<X-Requested-With> header a page can only send to its own origin is what
-keeps another site from reading the data through the user's cookie.
-
-=back
-
-Both answer the same JSON, so a page of the modern interface and an API client
-see exactly the same fields. Every C</api/> request is token only and drops
-its session (L<App::Netdisco::Web::AuthN>), which is why the browser cannot
-simply use the first address.
+The modules under App::Netdisco::Web::Data read devices, ports, nodes, jobs
+and the like from the database and return them as plain, normalized Perl data,
+the same whichever interface asks. They serve no routes: an interface that
+reads them from the browser serves them itself (the modern one does so in
+L<App::Netdisco::Web::UI::Modern::Data>), so that a third interface can build
+on the same data without the core growing an address for each.
 
 =head2 Conventions
 
@@ -70,56 +49,6 @@ Units are in the name: C<_bps>, C<_mw>, C<_seconds>.
 =back
 
 =cut
-
-# The Swagger document lists v2 next to v1; both share the same url_base. The
-# documented path is appended after URI has built the base, as v1 does with
-# api_base, because URI would percent-encode the braces of {ip}.
-sub _api_path {
-  my $path = shift;
-  return setting('url_base')->with('/api/v2')->path . $path;
-}
-
-=head2 register_data_route( %args )
-
-C<pattern> is the path after the C</api/v2> or C</ajax/data/v2> prefix, as a
-regex fragment with named captures; C<doc_path> is the same path in Swagger's
-C<{name}> form; C<doc> is the rest of the C<swagger_path> entry; C<code> gets
-the captures as a hash ref and returns the response body.
-
-=cut
-
-sub register_data_route {
-  my %args = @_;
-  my ($pattern, $code) = @args{qw/pattern code/};
-
-  my $handler = sub {
-    my $body = try {
-      $code->({ %{ captures() || {} } });
-    }
-    catch {
-      # anything that is not ours, Dancer's own continuations included,
-      # goes on up as it came
-      die $_ unless blessed $_ and $_->isa('App::Netdisco::Web::Data::Problem');
-      $_;
-    };
-
-    if (blessed $body) {
-      status $body->{status};
-      $body = { %$body };
-    }
-
-    content_type 'application/json';
-    return JSON::PP->new->utf8->canonical->allow_nonref->encode($body);
-  };
-
-  swagger_path {
-    tags => ['Objects v2'],
-    %{ $args{doc} || {} },
-    path => _api_path($args{doc_path}),
-  }, get qr{^/api/v2${pattern}$} => require_role api => $handler;
-
-  ajax qr{^/ajax/data/v2${pattern}$} => require_login $handler;
-}
 
 =head2 problem( $status, $title, $detail? )
 

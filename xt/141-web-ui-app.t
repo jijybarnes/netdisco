@@ -53,9 +53,10 @@ test_psgi $app, sub {
   like $modern, $MODERN, 'loginPage__cookie_modern__renders_the_modern_layout';
   like $modern, qr/class="nd2-topbar"/, 'loginPage__cookie_modern__has_the_modern_top_bar';
   like $modern, qr{/modern/css/modern\.css\?v=}, 'loginPage__cookie_modern__links_the_modern_stylesheet';
-  # index.tt has no modern version yet, so this is the overlay falling through
-  like $modern, qr/class="nd_login-form"/,
-    'loginPage__cookie_modern__shows_the_classic_login_form_inside_the_modern_shell';
+  # the modern index.tt, with the hooks netdisco.js signs in through
+  like $modern, qr/<form class="nd_login-form nd2-login-form" method="post" action="[^"]*\/login">/,
+    'loginPage__cookie_modern__shows_the_modern_login_form';
+  like $modern, qr/id="loginuser"[^>]*name="username"/, 'loginPage__cookie_modern__keeps_the_username_field_netdisco_js_focuses';
 
   unlike $page->('nd_web_ui=../views-modern'), $MODERN,
     'loginPage__cookie_not_an_interface_name__falls_back_to_the_default';

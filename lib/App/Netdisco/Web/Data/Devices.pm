@@ -14,7 +14,7 @@ App::Netdisco::Web::Data::Devices - the list of devices, normalized
 
 =head1 DESCRIPTION
 
-What the modern interface's Devices page reads, and what C<GET /api/v2/devices>
+What the modern interface's Devices page reads, and what C<GET /ajax/data/v2/devices>
 returns: one light row per device, searched, ordered and cut to a page in the
 database, so that a site with many thousands of devices sends only what is
 shown.

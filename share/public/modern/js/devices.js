@@ -1,5 +1,5 @@
 // The Devices page: every device the site knows, searched, ordered and paged
-// by the database through GET /api/v2/devices, so that a site with many
+// by the database through GET /ajax/data/v2/devices, so that a site with many
 // thousands of them sends only what is on screen. The address bar keeps the
 // search, the filter and the order, so a page can be bookmarked and shared.
 //

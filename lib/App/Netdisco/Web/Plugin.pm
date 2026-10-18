@@ -21,9 +21,9 @@ set(
   '_admin_order'  => [],
   '_reports_menu' => {},
   '_reports' => {},
-  # the views and views-modern directories plugins registered, last first
-  '_plugin_template_paths' => [],
-  '_plugin_modern_template_paths' => [],
+  # the paths plugins registered, last first, where each web interface looks
+  # for the plugin's views-NAME (App::Netdisco::Web::UI)
+  '_plugin_template_roots' => [],
   '_report_order' => [qw/Device Port IP Node VLAN Network Wireless/, 'My Reports'],
 );
 
@@ -39,13 +39,7 @@ register 'register_template_path' => sub {
 
   unshift @{ config->{engines}->{netdisco_template_toolkit}->{INCLUDE_PATH} },
        dir($path, 'views')->stringify;
-  unshift @{ setting('_plugin_template_paths') }, dir($path, 'views')->stringify;
-
-  # a plugin draws its pages for the modern interface from views-modern, if it
-  # has one (see App::Netdisco::Web::UI::ui_include_paths)
-  my $modern = dir($path, 'views-modern');
-  unshift @{ setting('_plugin_modern_template_paths') }, $modern->stringify
-    if -d $modern;
+  unshift @{ setting('_plugin_template_roots') }, dir($path)->stringify;
 };
 
 sub _register_include {
@@ -303,30 +297,32 @@ Admin Menu function (job control, manual topology, pseudo devices)
 
 See L<https://github.com/netdisco/netdisco/wiki/Web-Plugins> for details.
 
-=head1 The modern web interface
+=head1 Web interfaces
 
-Everything a plugin registers is used by both interfaces: navigation items,
-reports, admin tasks, device and search tabs (with their sidebars), device
-details, CSS and JavaScript, and device port columns. For the modern one:
+Everything a plugin registers is used by every web interface (see
+L<App::Netdisco::Web::UI>): navigation items, reports, admin tasks, device and
+search tabs (with their sidebars), device details, CSS and JavaScript, and
+device port columns.
 
 =over 4
 
 =item *
 
-A plugin column's F<plugin/E<lt>nameE<gt>/device_port_column.tt> is drawn on
-the server with C<row>, C<device> and C<config> as in the classic Ports tab,
-and its F<device_port_column_csv.tt> writes its CSV values, as there. The
-modern tab sorts and filters the column by its text. After drawing the table
-it fires C<nd2:ports-drawn> on the tab, for a plugin's script that works on
-the cells it drew.
+An interface that redraws a page draws it from other data than the classic
+one, so a plugin's classic template for that page cannot stand in for it. A
+plugin overrides an interface's own templates from a F<views-NAME> directory
+(F<views-modern> for the modern interface) beside the F<views> one given to
+C<register_template_path>. Netdisco says at startup which classic overrides an
+interface does not use.
 
 =item *
 
-A plugin's own templates are used for the pages the modern interface draws
-itself only from a F<views-modern> directory beside the F<views> one given to
-C<register_template_path>: those pages are drawn from other data than the
-classic ones. Netdisco says at startup which classic overrides the modern
-interface does not use.
+The modern interface draws a plugin port column with the plugin's own
+F<plugin/E<lt>nameE<gt>/device_port_column.tt> on the server, with C<row>,
+C<device> and C<config> as in the classic Ports tab, and its CSV values with
+F<device_port_column_csv.tt>, as there. It sorts and filters the column by its
+text, and after drawing the table fires C<nd2:ports-drawn> on the tab, for a
+plugin's script that works on the cells it drew.
 
 =item *
 

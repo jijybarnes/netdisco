@@ -1,4 +1,4 @@
-package App::Netdisco::Web::DeviceOverview;
+package App::Netdisco::Web::UI::Modern::Overview;
 
 use Dancer ':syntax';
 use Dancer::Plugin::Ajax;
@@ -12,7 +12,7 @@ use App::Netdisco::Web::Data::Ports qw/device_ports ports_overview/;
 
 =head1 NAME
 
-App::Netdisco::Web::DeviceOverview - the device page's Overview tab
+App::Netdisco::Web::UI::Modern::Overview - the device page's Overview tab
 
 =head1 DESCRIPTION
 
@@ -21,9 +21,8 @@ glance, what needs a look, PoE, the device's facts and when it was last
 polled. It only exists in the modern interface (its template is in
 F<share/views-modern>), so the classic one neither lists it nor serves it.
 
-It is registered here, among the core modules, rather than as a web plugin, so
-that it comes first among the device tabs whatever a site's C<web_plugins>
-list holds.
+The interface is loaded before the web plugins, so the tab comes first among
+the device tabs whatever a site's C<web_plugins> list holds.
 
 =cut
 

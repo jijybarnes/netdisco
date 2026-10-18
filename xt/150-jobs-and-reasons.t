@@ -7,7 +7,7 @@ use Test::More 0.88;
 use JSON::PP ();
 
 use App::Netdisco::Web::Data::Jobs qw/normalize_job job_state my_jobs/;
-use App::Netdisco::Web::PortsModern 'port_reasons';
+use App::Netdisco::Web::UI::Modern::Ports 'port_reasons';
 
 # The jobs the modern interface lists, and the reasons a port change is logged
 # under. Pure, so pinned without a database (xt/36).

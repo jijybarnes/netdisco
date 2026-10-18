@@ -51,6 +51,9 @@ path: '/'
 web_home: '/inventory'
 web_theme: auto
 default_web_ui: classic
+web_uis:
+  - Modern
+extra_web_uis: []
 web_plugins:
   - Inventory
   - Report::PortVLANMismatch

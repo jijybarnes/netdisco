@@ -3,25 +3,43 @@ package App::Netdisco::Web::UI;
 use Dancer ':syntax';
 use Dancer::Plugin::Auth::Extensible;
 use Path::Class 'dir';
+use Module::Load ();
 use URI;
-use JSON::PP ();
+use Try::Tiny;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/
-  web_ui_names valid_web_ui current_web_ui ui_include_paths safe_back_path
-  back_from_referer device_tab_for page_segments nav_for crumbs_for
-  modern_dirs_for modern_shadowed_overrides palette_index
+  register_web_ui web_ui web_ui_names valid_web_ui current_web_ui
+  ui_include_paths ui_dirs_for ui_shadowed_overrides web_ui_module
+  safe_back_path back_from_referer
 /;
 
 =head1 NAME
 
-App::Netdisco::Web::UI - choose between the classic and the modern web interface
+App::Netdisco::Web::UI - web interfaces, and choosing between them
 
 =head1 DESCRIPTION
 
-An interface is a directory of views laid over F<share/views>. A template the
-interface does not provide falls through to the classic one, so pages move to
-the modern interface one at a time and the rest keep working inside it.
+Netdisco's web pages can be drawn by more than one interface. The classic one
+is F<share/views> itself. Any other is a directory of views laid over it: a
+template the interface does not provide falls through to the classic one, so
+an interface can redraw the pages it wants and leave the rest as they are,
+inside its own layout.
+
+An interface other than classic comes as a module, named in C<web_uis> (or a
+site's C<extra_web_uis>) the way web plugins are named in C<web_plugins>:
+C<Modern> is C<App::Netdisco::Web::UI::Modern>, C<X::Mine> is
+C<App::NetdiscoX::Web::UI::Mine> (looked for under F<site_plugins> too), and
+C<+Some::Module> is that module. The module calls L</register_web_ui> and
+brings whatever else the interface needs on the server: routes of its own,
+hooks that hand its templates more data. The core routes do not know about
+it.
+
+By convention an interface named C<mine> keeps its templates in
+F<views-mine> and its scripts and styles under F</mine/> in the public
+directory. A site (C<template_paths>) or a web plugin
+(C<register_template_path>) overrides its templates from a F<views-mine>
+directory beside its F<views> one.
 
 C<default_web_ui> names the interface a browser gets until its user picks one.
 The pick is kept in the C<nd_web_ui> cookie rather than in the users table, so
@@ -30,16 +48,86 @@ lost harmlessly when the cookie is.
 
 =cut
 
-# classic has no overlay: it is share/views itself.
-my %VIEWS_DIR = (classic => undef, modern => 'views-modern');
-
 use constant COOKIE => 'nd_web_ui';
 
-sub web_ui_names { return sort keys %VIEWS_DIR }
+# name => { name, views, switch_label, switch_title, overrides }
+my %UI = (
+  classic => { name => 'classic', views => undef },
+);
+
+=head1 FUNCTIONS
+
+=head2 register_web_ui( \%config )
+
+Declares an interface: C<name>, the one the cookie and C<default_web_ui> use;
+C<views>, its directory of templates; and, for the classic interface's menu,
+C<switch_label> and C<switch_title>, what the item that moves a browser to it
+says. A name already registered is replaced.
+
+=cut
+
+sub register_web_ui {
+  my $config = shift;
+  my $name = $config->{name};
+  die "register_web_ui needs a name\n" unless defined $name and $name =~ m/^[a-z][a-z0-9_]*$/;
+  die "the classic interface is built in\n" if $name eq 'classic';
+  $UI{$name} = {
+    name         => $name,
+    views        => (defined $config->{views} ? "$config->{views}" : undef),
+    switch_label => ($config->{switch_label} // "Try the $name interface"),
+    switch_title => ($config->{switch_title} // "Switch this browser to the $name interface"),
+    overrides    => [],
+  };
+  return $UI{$name};
+}
+
+=head2 web_ui( $name )
+
+The interface registered under C<$name>, or C<undef>.
+
+=cut
+
+sub web_ui { my $name = shift; return (defined $name and not ref $name) ? $UI{$name} : undef }
+
+sub web_ui_names { return sort keys %UI }
 
 sub valid_web_ui {
   my $name = shift;
-  return (defined $name and not ref $name and exists $VIEWS_DIR{$name}) ? 1 : 0;
+  return (defined $name and not ref $name and exists $UI{$name}) ? 1 : 0;
+}
+
+=head2 web_ui_module( $entry )
+
+Pure: the module a C<web_uis> entry names, as described above.
+
+=cut
+
+sub web_ui_module {
+  my $entry = shift;
+  return undef unless defined $entry and length $entry and not ref $entry;
+  return $1 if $entry =~ m/^\+(.+)$/;
+  return "App::NetdiscoX::Web::UI::$1" if $entry =~ m/^X::(.+)$/;
+  return "App::Netdisco::Web::UI::$entry";
+}
+
+=head2 load_web_uis()
+
+Loads the modules C<web_uis> and C<extra_web_uis> name. One that cannot be
+loaded is reported and left out rather than stopping the web server: the
+classic interface works without it.
+
+=cut
+
+sub load_web_uis {
+  my @core  = @{ (ref [] eq ref setting('web_uis')) ? setting('web_uis') : [] };
+  my @extra = @{ (ref [] eq ref setting('extra_web_uis')) ? setting('extra_web_uis') : [] };
+  unshift @INC, dir(($ENV{NETDISCO_HOME} || $ENV{HOME}), 'site_plugins')->stringify if @extra;
+
+  foreach my $entry (@core, @extra) {
+    my $module = web_ui_module($entry) or next;
+    try { Module::Load::load($module) }
+    catch { warning sprintf 'web interface %s could not be loaded: %s', $entry, $_ };
+  }
 }
 
 sub default_web_ui_message {
@@ -74,52 +162,53 @@ a code ref at the front of the template engine's C<INCLUDE_PATH>, which
 Template Toolkit expands on every lookup, so the overlay follows the request
 rather than being fixed when the engine is built.
 
-For the modern interface these are, in order: the C<views-modern> beside each
-of the site's C<template_paths>, the C<views-modern> of each plugin that
-registered a template path (the last registered first, as for C<views>), and
-F<share/views-modern>. A template none of them has falls through to the
+These are, in order: the overrides of the interface's templates (a site's,
+then each plugin's, the last registered first, as for F<views>), then the
+interface's own directory. A template none of them has falls through to the
 classic chain behind, site, plugins, then F<share/views>, so a site or a
-plugin overriding a template the modern interface does not draw itself is
-used by both interfaces.
+plugin overriding a template the interface does not draw itself is used by
+every interface. The classic interface adds nothing.
 
 =cut
 
 sub ui_include_paths {
-  my $sub = $VIEWS_DIR{ current_web_ui() } or return [];
-  return [ @{ setting('_ui_override_paths') || [] },
-           dir(setting('views'))->parent->subdir($sub)->stringify ];
+  my $ui = $UI{ current_web_ui() } or return [];
+  return [] unless defined $ui->{views};
+  return [ @{ $ui->{overrides} || [] }, $ui->{views} ];
 }
 
-=head2 modern_dirs_for( @template_paths )
+=head2 ui_dirs_for( $name, @template_paths )
 
-Where a site's modern templates sit, for each of its C<template_paths>: beside
-a directory named F<views> (F<.../share/views> gives F<.../share/views-modern>),
-else inside it. Only those that exist, each once, in the given order.
+Where a site's templates for interface C<$name> sit, for each of its
+C<template_paths>: beside a directory named F<views> (F<.../share/views> gives
+F<.../share/views-NAME>), else inside it. Only those that exist, each once, in
+the given order.
 
 =cut
 
-sub modern_dirs_for {
+sub ui_dirs_for {
+  my ($name, @paths) = @_;
   my %seen;
   return grep { -d $_ and not $seen{$_}++ }
          map  { my $d = dir($_);
-                ($d->basename eq 'views' ? $d->parent->subdir('views-modern')
-                                         : $d->subdir('views-modern'))->stringify }
-         grep { defined and length } @_;
+                ($d->basename eq 'views' ? $d->parent->subdir("views-$name")
+                                         : $d->subdir("views-$name"))->stringify }
+         grep { defined and length } @paths;
 }
 
-=head2 modern_shadowed_overrides( \@classic_dirs, \@modern_dirs, $core_modern )
+=head2 ui_shadowed_overrides( \@classic_dirs, \@override_dirs, $views )
 
-The classic overrides the modern interface does not use: each template under
-one of C<@classic_dirs> (a site's C<template_paths>, a plugin's views) whose
-name the modern interface draws itself in C<$core_modern> and that none of
-C<@modern_dirs> overrides for it. The modern template is drawn from other data
-than the classic one, so the classic override cannot stand in for it. Returns
+The classic overrides an interface does not use: each template under one of
+C<@classic_dirs> (a site's C<template_paths>, a plugin's views) whose name the
+interface draws itself in C<$views> and that none of C<@override_dirs>
+overrides for it. The interface's template is drawn from other data than the
+classic one, so the classic override cannot stand in for it. Returns
 C<[ dir, template ]> pairs, sorted.
 
 =cut
 
-sub modern_shadowed_overrides {
-  my ($classic, $modern, $core) = @_;
+sub ui_shadowed_overrides {
+  my ($classic, $overrides, $core) = @_;
   return () unless defined $core and -d $core;
 
   my %drawn;
@@ -136,11 +225,45 @@ sub modern_shadowed_overrides {
   foreach my $c (grep { defined and -d $_ } @{ $classic || [] }) {
     foreach my $t (sort keys %drawn) {
       next unless -f dir($c)->file($t);
-      next if grep { -f dir($_)->file($t) } @{ $modern || [] };
+      next if grep { -f dir($_)->file($t) } @{ $overrides || [] };
       push @found, [ "$c", $t ];
     }
   }
   return sort { $a->[0] cmp $b->[0] or $a->[1] cmp $b->[1] } @found;
+}
+
+=head2 setup_web_uis( \@template_paths )
+
+Run once, after the web plugins and the site's C<template_paths> are known:
+finds each interface's overrides, puts the overlay in front of the template
+engine's C<INCLUDE_PATH>, and says which classic overrides an interface does
+not use.
+
+=cut
+
+sub setup_web_uis {
+  my $site = shift || [];
+  my @roots = @{ setting('_plugin_template_roots') || [] };
+
+  foreach my $ui (grep { defined $_->{views} } values %UI) {
+    my $name = $ui->{name};
+    $ui->{overrides} = [ ui_dirs_for($name, @$site),
+                         grep { -d $_ } map { dir($_, "views-$name")->stringify } @roots ];
+
+    # said once at startup rather than left to be found by a user of the
+    # interface wondering where the site's change went
+    foreach my $s (ui_shadowed_overrides(
+        [ @$site, map { dir($_, 'views')->stringify } @roots ], $ui->{overrides}, $ui->{views})) {
+      warning sprintf
+        '%s overrides %s, which the %s interface draws itself: browsers using the'
+        . ' %s interface do not see this override. Copy it to a views-%s'
+        . ' directory beside it and adapt it to change the %s page too.',
+        $s->[0], $s->[1], ($name) x 4;
+    }
+  }
+
+  unshift @{ config->{engines}->{netdisco_template_toolkit}->{INCLUDE_PATH} },
+    \&ui_include_paths;
 }
 
 =head2 safe_back_path( $path )
@@ -186,171 +309,19 @@ sub back_from_referer {
   return safe_back_path($from->path_query);
 }
 
-=head2 device_tab_for( $web_ui, $requested_tab )
-
-The device page tab to open. The modern interface opens on its Overview, the
-classic one on Details as it always has. Overview exists only in the modern
-interface, so a link to it (or a switch back to classic while on it) opens
-Details there instead.
-
-=cut
-
-sub device_tab_for {
-  my ($ui, $tab) = @_;
-  my $modern = (defined $ui and $ui eq 'modern');
-  return ($modern ? 'overview' : 'details') unless defined $tab and length $tab;
-  return 'details' if $tab eq 'overview' and not $modern;
-  return $tab;
-}
-
-=head2 page_segments( $path, $base )
-
-The path's segments below the site's base path and a tenant prefix:
-C</nd/t/branch/device> under base C</nd> is C<('device')>.
-
-=cut
-
-sub page_segments {
-  my ($path, $base) = @_;
-  $path = '' unless defined $path;
-  $base = '' if not defined $base or $base eq '/';
-  # the base is a whole segment: /nd does not take the start of /ndx
-  $path =~ s{^\Q$base\E(?=/|$)}{} if length $base;
-  $path =~ s{^/t/[^/]+(?=/|$)}{};
-  return grep { length } split m{/}, $path;
-}
-
-=head2 nav_for( \@segments, $vars_nav )
-
-Which item of the rail a page belongs to. Reports, admin, inventory and
-statistics pages say so themselves (C<$vars_nav>); a device, a search and the
-list of devices are all "devices"; the front page is "home".
-
-=cut
-
-sub nav_for {
-  my ($segments, $vars_nav) = @_;
-  my $first = $segments->[0];
-  return 'home' unless defined $first;
-  return 'devices' if $first =~ m/^(?:device|devices|search)$/;
-  return $vars_nav;
-}
-
-=head2 crumbs_for( \@segments, \%context )
-
-The breadcrumb of a page: a list of C<{ label, href }>, where C<href> is an
-application path, or absent for a crumb that is not a page (there is no page of
-all reports, so "Reports" is only a name). The last crumb is the page itself.
-C<%context> holds what the path does not: C<display_name> of the device,
-C<query> of a search, and C<reports> and C<admin_tasks>, the registered ones.
-
-=cut
-
-sub crumbs_for {
-  my ($segments, $ctx) = @_;
-  my ($first, $second) = @$segments;
-  return [] unless defined $first;
-
-  return [ { label => 'Devices' } ] if $first eq 'devices';
-  return [ { label => 'Devices', href => '/devices' }, { label => $ctx->{display_name} } ]
-    if $first eq 'device' and defined $ctx->{display_name} and length $ctx->{display_name};
-  return [ { label => 'Inventory' } ] if $first eq 'inventory';
-  if ($first eq 'search') {
-    my $q = $ctx->{query};
-    return [ { label => 'Search', ((defined $q and length $q) ? (href => '/search') : ()) },
-             ((defined $q and length $q) ? { label => $q } : ()) ];
-  }
-  if ($first eq 'report' and defined $second) {
-    my $r = ($ctx->{reports} || {})->{$second} or return [ { label => 'Reports' } ];
-    return [ { label => 'Reports' },
-             ((defined $r->{category} and length $r->{category}) ? { label => $r->{category} } : ()),
-             { label => ($r->{label} // $second) } ];
-  }
-  if ($first eq 'admin' and defined $second) {
-    my $t = ($ctx->{admin_tasks} || {})->{$second} or return [ { label => 'Admin' } ];
-    return [ { label => 'Admin' }, { label => ($t->{label} // $second) } ];
-  }
-  return [];
-}
-
 hook 'before' => sub {
   my $picked = cookie(COOKIE);
   var(web_ui => (valid_web_ui($picked) ? $picked : setting('_default_web_ui')));
 };
 
-=head2 palette_index( \%registry, \&may )
-
-Pure: what the command palette offers without asking the server, from what the
-core and the web plugins registered: the pages (Home, Devices, the navigation
-items), the reports, the admin tasks, and the search tabs, which the palette
-offers to search the typed text with. C<%registry> holds C<navbar_items>,
-C<reports>, C<reports_menu>, C<report_order>, C<admin_tasks>,
-C<admin_order> and C<search_tabs> as the settings of those names have them;
-C<may> is asked with a list of roles and says whether the user has one. A
-report or a task that is hidden is left out, as the menus leave it out, and
-so is a task the user may not open.
-
-=cut
-
-sub palette_index {
-  my ($r, $may) = @_;
-  $may ||= sub { 0 };
-  my @items = (
-    { group => 'Pages', label => 'Home', href => '/', icon => 'fa-house' },
-    { group => 'Pages', label => 'Devices', sub => 'Every device', href => '/devices', icon => 'fa-server' },
-    (map {{ group => 'Pages', label => $_->{label}, href => $_->{path},
-            icon => (($_->{icon} // '') =~ m/^fa-[a-z0-9-]+$/ ? $_->{icon}
-                     : ($_->{tag} // '') eq 'inventory' ? 'fa-boxes-stacked' : 'fa-circle-dot') }}
-     grep { $_->{label} and $_->{path} } @{ $r->{navbar_items} || [] }),
-  );
-
-  foreach my $cat (@{ $r->{report_order} || [] }) {
-    foreach my $tag (@{ ($r->{reports_menu} || {})->{$cat} || [] }) {
-      my $rep = ($r->{reports} || {})->{$tag} or next;
-      next if $rep->{hidden};
-      push @items, { group => 'Reports', label => $rep->{label}, sub => $cat,
-                     href => "/report/$tag?firstsearch=on", icon => 'fa-chart-column' };
-    }
-  }
-
-  foreach my $tag (@{ $r->{admin_order} || [] }) {
-    my $task = ($r->{admin_tasks} || {})->{$tag} or next;
-    next if $task->{hidden};
-    next unless $may->(['admin']) or ($task->{roles} and $may->($task->{roles}));
-    push @items, { group => 'Admin', label => $task->{label}, sub => 'Admin task',
-                   href => "/admin/$tag?firstsearch=on", icon => 'fa-gear' };
-  }
-
-  my @search = map {{ tag => $_->{tag}, label => $_->{label} }}
-               grep { $_->{tag} and $_->{label} and not $_->{hidden} } @{ $r->{search_tabs} || [] };
-  return { items => \@items, search_tabs => \@search };
-}
-
+# web_uis: the other interfaces a layout can offer to switch to
 hook 'before_template' => sub {
   my $tokens = shift;
   $tokens->{web_ui} = current_web_ui();
   $tokens->{web_ui_names} = [ web_ui_names() ];
-
-  return unless current_web_ui() eq 'modern' and not request->is_ajax;
-  my @segments = page_segments(request->path, setting('path'));
-  $tokens->{nd2_nav} = nav_for(\@segments, vars->{'nav'});
-  $tokens->{nd2_crumbs} = crumbs_for(\@segments, {
-    display_name => $tokens->{display_name},
-    query        => scalar param('q'),
-    reports      => setting('_reports'),
-    admin_tasks  => setting('_admin_tasks'),
-  });
-
-  return unless session('logged_in_user');
-  $tokens->{nd2_palette} = JSON::PP->new->canonical->encode(palette_index({
-    navbar_items => setting('_navbar_items'),
-    reports      => setting('_reports'),
-    reports_menu => setting('_reports_menu'),
-    report_order => setting('_report_order'),
-    admin_tasks  => setting('_admin_tasks'),
-    admin_order  => setting('_admin_order'),
-    search_tabs  => setting('_search_tabs'),
-  }, sub { my $roles = shift; scalar grep { user_has_role($_) } @$roles }));
+  $tokens->{web_uis} = [ map {{ name => $_->{name}, switch_label => $_->{switch_label},
+                                switch_title => $_->{switch_title} }}
+                         map { $UI{$_} } grep { $_ ne 'classic' } web_ui_names() ];
 };
 
 post '/web_ui' => require_login sub {
