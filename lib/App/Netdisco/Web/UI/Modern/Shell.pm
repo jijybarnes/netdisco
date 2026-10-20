@@ -10,7 +10,7 @@ use App::Netdisco::Web::UI 'current_web_ui';
 use App::Netdisco::Web::UI::Modern::Data::Device 'device_summary';
 
 use base 'Exporter';
-our @EXPORT_OK = qw/device_tab_for page_segments nav_for crumbs_for palette_index/;
+our @EXPORT_OK = qw/page_segments nav_for crumbs_for palette_index/;
 
 =head1 NAME
 
@@ -26,29 +26,9 @@ C<nd2_nav>, the rail item the page belongs to; C<nd2_crumbs>, the breadcrumb;
 C<nd2_palette>, the palette's index; and C<nd2_device>, the device of the
 device page, normalized.
 
-The device page opens on the Overview tab here, and on Details in the classic
-interface, as it always has (L</device_tab_for>).
-
 =head1 FUNCTIONS
 
 =cut
-
-=head2 device_tab_for( $web_ui, $requested_tab )
-
-The device page tab to open. The modern interface opens on its Overview, the
-classic one on Details as it always has. Overview exists only in the modern
-interface, so a link to it (or a switch back to classic while on it) opens
-Details there instead.
-
-=cut
-
-sub device_tab_for {
-  my ($ui, $tab) = @_;
-  my $modern = (defined $ui and $ui eq 'modern');
-  return ($modern ? 'overview' : 'details') unless defined $tab and length $tab;
-  return 'details' if $tab eq 'overview' and not $modern;
-  return $tab;
-}
 
 =head2 page_segments( $path, $base )
 
@@ -170,23 +150,15 @@ sub palette_index {
 
 sub _modern_page { current_web_ui() eq 'modern' and not request->is_ajax }
 
-# the tab the address asked for, before the device route defaults it
-hook 'before' => sub {
-  var(nd2_asked_tab => scalar param('tab')) if request->path_info =~ m{(?:^|/)device$};
-};
-
 hook 'before_template' => sub {
   my $tokens = shift;
   return if request->is_ajax;
   my @segments = page_segments(request->path, setting('path'));
 
-  # the device page: its tab, and its header's device
-  if (@segments == 1 and $segments[0] eq 'device' and $tokens->{netdisco_device}) {
-    my $tab = device_tab_for(current_web_ui(), vars->{'nd2_asked_tab'});
-    params->{'tab'} = $tab;
-    $tokens->{device} = $tab;
-    $tokens->{nd2_device} = device_summary(schema(vars->{'tenant'}), $tokens->{netdisco_device})
-      if current_web_ui() eq 'modern';
+  # the device page's header: its device
+  if (@segments == 1 and $segments[0] eq 'device' and $tokens->{netdisco_device}
+      and current_web_ui() eq 'modern') {
+    $tokens->{nd2_device} = device_summary(schema(vars->{'tenant'}), $tokens->{netdisco_device});
   }
 
   return unless _modern_page();

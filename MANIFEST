@@ -260,7 +260,6 @@ lib/App/Netdisco/Web/UI/Modern/Data/Summary.pm
 lib/App/Netdisco/Web/UI/Modern/DataRoutes.pm
 lib/App/Netdisco/Web/UI/Modern/DevicesPage.pm
 lib/App/Netdisco/Web/UI/Modern/Home.pm
-lib/App/Netdisco/Web/UI/Modern/Overview.pm
 lib/App/Netdisco/Web/UI/Modern/Ports.pm
 lib/App/Netdisco/Web/UI/Modern/Shell.pm
 lib/App/Netdisco/Worker/Actions.pm
@@ -567,7 +566,6 @@ share/schema_versions/App-Netdisco-DB-98-99-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-99-100-PostgreSQL.sql
 share/views-modern/ajax/device/details.tt
 share/views-modern/ajax/device/modules.tt
-share/views-modern/ajax/device/overview.tt
 share/views-modern/ajax/device/ports.tt
 share/views-modern/ajax/device/ports_csv.tt
 share/views-modern/device.tt
@@ -782,8 +780,8 @@ xt/503-web-ui-modern-layout.t
 xt/504-data-normalize.t
 xt/505-data-routes.t
 xt/506-hidden-device-ports.t
-xt/507-device-overview-data.t
-xt/508-device-overview-templates.t
+xt/507-device-poe-data.t
+xt/508-device-page-templates.t
 xt/509-ports-modern.t
 xt/510-jobs-and-reasons.t
 xt/511-modern-shell-and-devices.t

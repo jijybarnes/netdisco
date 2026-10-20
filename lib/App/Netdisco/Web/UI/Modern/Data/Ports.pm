@@ -10,7 +10,7 @@ use App::Netdisco::Web::UI::Modern::Data qw/problem json_bool iso8601_sql speed_
 use base 'Exporter';
 our @EXPORT_OK = qw/
   device_ports device_port port_nodes
-  normalize_port normalize_node port_status ports_overview normalize_control normalize_last_node
+  normalize_port normalize_node port_status normalize_control normalize_last_node
   normalize_vlan normalize_log_entry device_vlans port_log free_interval
   hidden_device_ports
 /;
@@ -611,49 +611,6 @@ sub port_nodes {
   push @{ $ssids_by_mac{ $_->get_column('mac') } }, $_->get_column('ssid') for $wireless->all;
 
   return [ map { normalize_node($_, $ips_by_mac{ $_->{mac} }, $ssids_by_mac{ $_->{mac} }) } @rows ];
-}
-
-
-=head2 ports_overview( \@ports )
-
-Pure: normalized ports summed up for a device's overview: the count in each
-status, and the ports that need a look, worst first. A port needs a look when
-it is error disabled, blocked by spanning tree, or linked at half duplex
-(nearly always a duplex mismatch with what is plugged in).
-
-=cut
-
-my %ATTENTION_RANK = (errdisabled => 0, blocking => 1, half_duplex => 2);
-
-sub ports_overview {
-  my $ports = shift || [];
-  my %count = map {( $_ => 0 )} qw/up down disabled blocking errdisabled/;
-  my @attention = ();
-
-  foreach my $p (@$ports) {
-    ++$count{ $p->{status} };
-    if ($p->{status} eq 'errdisabled') {
-      push @attention, { port => $p->{port}, kind => 'errdisabled',
-                         detail => $p->{error_disable_cause}, descr => $p->{name} };
-    }
-    elsif ($p->{status} eq 'blocking') {
-      push @attention, { port => $p->{port}, kind => 'blocking',
-                         detail => ($p->{neighbor} ? ($p->{neighbor}{ip} // $p->{neighbor}{id}) : undef),
-                         descr => $p->{name} };
-    }
-    elsif ($p->{status} eq 'up' and ($p->{duplex} // '') eq 'half') {
-      push @attention, { port => $p->{port}, kind => 'half_duplex',
-                         detail => $p->{speed}, descr => $p->{name} };
-    }
-  }
-
-  # sorted by kind then in the ports' own order, which is the order given
-  my $i = 0;
-  my %pos = map {( $_->{port} => $i++ )} @$ports;
-  @attention = sort { $ATTENTION_RANK{ $a->{kind} } <=> $ATTENTION_RANK{ $b->{kind} }
-                      or $pos{ $a->{port} } <=> $pos{ $b->{port} } } @attention;
-
-  return { total => scalar @$ports, by_status => \%count, attention => \@attention };
 }
 
 1;
