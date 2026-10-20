@@ -22,11 +22,7 @@ C<web_uis> leaves the interface out entirely.
 =item L<App::Netdisco::Web::UI::Modern::Shell>
 
 What its layout draws on every page: the rail, the breadcrumb, the command
-palette, the device page's header; and the device page's Overview default.
-
-=item L<App::Netdisco::Web::UI::Modern::Overview>
-
-The device page's Overview tab.
+palette, the device page's header.
 
 =item L<App::Netdisco::Web::UI::Modern::Ports>
 
@@ -60,7 +56,6 @@ register_web_ui({
 });
 
 use App::Netdisco::Web::UI::Modern::Shell;
-use App::Netdisco::Web::UI::Modern::Overview;
 use App::Netdisco::Web::UI::Modern::DevicesPage;
 use App::Netdisco::Web::UI::Modern::Home;
 use App::Netdisco::Web::UI::Modern::DataRoutes;

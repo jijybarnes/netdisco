@@ -759,8 +759,8 @@ xt/143-web-ui-modern-layout.t
 xt/144-data-normalize.t
 xt/145-data-routes.t
 xt/146-hidden-device-ports.t
-xt/147-device-overview-data.t
-xt/148-device-overview-templates.t
+xt/147-device-poe-data.t
+xt/148-device-page-templates.t
 xt/149-ports-modern.t
 xt/150-jobs-and-reasons.t
 xt/151-modern-shell-and-devices.t

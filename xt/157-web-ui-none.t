@@ -47,7 +47,6 @@ my @routes = map { @{ Dancer::App->current->registry->routes($_) || [] } } qw/ge
 is scalar(grep { "$_->{pattern}" =~ m{/ajax/data/v2} } @routes), 0, 'noWebUis__no_data_route';
 is scalar(grep { "$_->{pattern}" eq '/ajax/content/device/ports' } @routes), 1, 'noWebUis__ports__the_classic_route_alone';
 is scalar(grep { "$_->{pattern}" eq '/devices' } @routes), 0, 'noWebUis__no_devices_page';
-ok !grep({ $_->{tag} eq 'overview' } @{ Dancer::Config::setting('_device_tabs') }), 'noWebUis__no_overview_tab';
 
 test_psgi $app, sub {
   my $cb = shift;

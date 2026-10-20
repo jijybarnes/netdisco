@@ -1,5 +1,5 @@
 // The modern device page: relative times, durations, and the poll buttons in
-// its header and Overview tab. Loaded as a module on device pages only. The
+// its header. Loaded as a module on device pages only. The
 // pure functions are exported for xt/js/modern-device.test.js.
 
 import { relativeTime, formatDuration } from './time.js';
