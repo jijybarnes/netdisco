@@ -381,6 +381,7 @@ share/public/javascripts/netdisco-daterange.js
 share/public/javascripts/netdisco-deferred-nodes.js
 share/public/javascripts/netdisco-netmap.js
 share/public/javascripts/netdisco-portcontrol.js
+share/public/javascripts/netdisco-ports.js
 share/public/javascripts/netdisco-request.js
 share/public/javascripts/netdisco-swagger.js
 share/public/javascripts/netdisco-tables.js
@@ -559,6 +560,7 @@ share/views/ajax/device/modules.tt
 share/views/ajax/device/netmap.tt
 share/views/ajax/device/port_nodes.tt
 share/views/ajax/device/ports.tt
+share/views/ajax/device/ports_cells.tt
 share/views/ajax/device/ports_csv.tt
 share/views/ajax/device/snmp.tt
 share/views/ajax/device/snmplabel.tt
@@ -710,6 +712,7 @@ xt/143-api-custom-field-role-scope.t
 xt/144-portctl-topology-gate.t
 xt/145-topology-del-only-matched.t
 xt/146-snmp-incomplete-walk-arg.t
+xt/147-ports-data-groups.t
 xt/20-checkacl.t
 xt/21-check_acl_no_ipaddr_only.t
 xt/30-backend-workers.t
@@ -790,6 +793,7 @@ xt/js/daterange-presets.test.js
 xt/js/deferred-nodes.test.js
 xt/js/disco-queue.test.js
 xt/js/error-reporter.test.js
+xt/js/fixtures/ports-options.json
 xt/js/history-ownership.test.js
 xt/js/navbar-submenu.test.js
 xt/js/netmap-autosave.test.js
@@ -802,6 +806,7 @@ xt/js/no-jstree.test.js
 xt/js/page-registry.test.js
 xt/js/pane-chrome.test.js
 xt/js/pane-settling.test.js
+xt/js/ports-table.test.js
 xt/js/portsort.test.js
 xt/js/request-helper.test.js
 xt/js/snmp-tree-control.test.js

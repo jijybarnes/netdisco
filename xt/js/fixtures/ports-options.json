@@ -1,0 +1,577 @@
+{
+   "columns" : [
+      {
+         "label" : "Port",
+         "name" : "c_port",
+         "options" : [
+            "c_port"
+         ],
+         "sort" : "portsort"
+      },
+      {
+         "label" : "Description",
+         "name" : "c_descr",
+         "options" : [
+            "c_descr"
+         ],
+         "sort" : "portsort"
+      },
+      {
+         "label" : "Last Comment",
+         "name" : "c_comment",
+         "options" : [
+            "c_comment"
+         ]
+      },
+      {
+         "label" : "Type",
+         "name" : "c_type",
+         "options" : [
+            "c_type"
+         ]
+      },
+      {
+         "label" : "Interface Index",
+         "name" : "c_ifindex",
+         "options" : [
+            "c_ifindex"
+         ],
+         "sort" : "num"
+      },
+      {
+         "label" : "Last Change",
+         "name" : "c_lastchange",
+         "options" : [
+            "c_lastchange"
+         ]
+      },
+      {
+         "label" : "Name",
+         "name" : "c_name",
+         "options" : [
+            "c_name"
+         ],
+         "sort" : "portsort"
+      },
+      {
+         "label" : "Tags",
+         "name" : "c_tags",
+         "options" : [
+            "c_tags"
+         ]
+      },
+      {
+         "label" : "External Links",
+         "name" : "c_links",
+         "options" : [
+            "c_links"
+         ]
+      },
+      {
+         "label" : "Speed (configured)",
+         "name" : "c_speed_admin",
+         "options" : [
+            "c_speed_admin"
+         ]
+      },
+      {
+         "label" : "Speed (running)",
+         "name" : "c_speed",
+         "options" : [
+            "c_speed"
+         ]
+      },
+      {
+         "label" : "Duplex (configured)",
+         "name" : "c_duplex_admin",
+         "options" : [
+            "c_duplex_admin"
+         ]
+      },
+      {
+         "label" : "Duplex (running)",
+         "name" : "c_duplex",
+         "options" : [
+            "c_duplex"
+         ]
+      },
+      {
+         "label" : "Error Message",
+         "name" : "c_error",
+         "options" : [
+            "c_error"
+         ]
+      },
+      {
+         "label" : "Port MAC",
+         "name" : "c_mac",
+         "options" : [
+            "c_mac"
+         ]
+      },
+      {
+         "label" : "MTU",
+         "name" : "c_mtu",
+         "options" : [
+            "c_mtu"
+         ],
+         "sort" : "num"
+      },
+      {
+         "label" : "Native VLAN",
+         "name" : "c_pvid",
+         "options" : [
+            "c_pvid"
+         ]
+      },
+      {
+         "label" : "VLAN Membership",
+         "name" : "c_vmember",
+         "options" : [
+            "c_vmember"
+         ]
+      },
+      {
+         "label" : "PoE",
+         "name" : "c_power",
+         "options" : [
+            "c_power"
+         ]
+      },
+      {
+         "label" : "SSID",
+         "name" : "c_ssid",
+         "options" : [
+            "c_ssid"
+         ]
+      },
+      {
+         "label" : "NAC/802.1X Status",
+         "name" : "c_nac_summary",
+         "options" : [
+            "c_nac_summary"
+         ]
+      },
+      {
+         "label" : "Connected Nodes",
+         "name" : "c_connected",
+         "options" : [
+            "c_nodes",
+            "c_neighbors"
+         ]
+      },
+      {
+         "label" : "Spanning Tree",
+         "name" : "c_stp",
+         "options" : [
+            "c_stp"
+         ]
+      },
+      {
+         "label" : "Up/Down Status",
+         "name" : "c_up",
+         "options" : [
+            "c_up"
+         ]
+      }
+   ],
+   "group_fields" : {
+      "admin" : [
+         "acl_service",
+         "acl_pvid",
+         "acl_name"
+      ],
+      "cells" : [
+         "cells_html"
+      ],
+      "comment" : [
+         "comment"
+      ],
+      "links" : [
+         "links_html"
+      ],
+      "neighbors" : [
+         "neighbor_ip",
+         "neighbor_dns",
+         "neighbor_mac"
+      ],
+      "nodes" : [
+         "node_count",
+         "node_search",
+         "nodes"
+      ],
+      "power" : [
+         "power"
+      ],
+      "ssid" : [
+         "ssids"
+      ],
+      "vlans" : [
+         "vlan_count",
+         "vlan_set"
+      ]
+   },
+   "options" : {
+      "age_num" : {
+         "cell" : [],
+         "groups" : [],
+         "reselect" : 1
+      },
+      "age_unit" : {
+         "cell" : [],
+         "groups" : [],
+         "reselect" : 1
+      },
+      "c_admin" : {
+         "cell" : [
+            "none"
+         ],
+         "column" : 1,
+         "groups" : [
+            "admin"
+         ],
+         "label" : "Port Control and Editing"
+      },
+      "c_comment" : {
+         "cell" : [
+            "c_comment"
+         ],
+         "column" : 1,
+         "groups" : [
+            "comment"
+         ],
+         "label" : "Last Comment"
+      },
+      "c_descr" : {
+         "cell" : [
+            "c_descr"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Description",
+         "sort" : "portsort"
+      },
+      "c_duplex" : {
+         "cell" : [
+            "c_duplex"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Duplex (running)"
+      },
+      "c_duplex_admin" : {
+         "cell" : [
+            "c_duplex_admin"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Duplex (configured)"
+      },
+      "c_error" : {
+         "cell" : [
+            "c_error"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Error Message"
+      },
+      "c_ifindex" : {
+         "cell" : [
+            "c_ifindex"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Interface Index",
+         "sort" : "num"
+      },
+      "c_lastchange" : {
+         "cell" : [
+            "c_lastchange"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Last Change"
+      },
+      "c_links" : {
+         "cell" : [
+            "c_links"
+         ],
+         "column" : 1,
+         "groups" : [
+            "links"
+         ],
+         "label" : "External Links"
+      },
+      "c_mac" : {
+         "cell" : [
+            "c_mac"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Port MAC"
+      },
+      "c_mtu" : {
+         "cell" : [
+            "c_mtu"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "MTU",
+         "sort" : "num"
+      },
+      "c_nac_summary" : {
+         "cell" : [
+            "c_nac_summary"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "NAC/802.1X Status"
+      },
+      "c_name" : {
+         "cell" : [
+            "c_name"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Name",
+         "sort" : "portsort"
+      },
+      "c_neighbors" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "column" : 1,
+         "groups" : [
+            "neighbors"
+         ],
+         "label" : "Connected Devices"
+      },
+      "c_nodes" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "column" : 1,
+         "groups" : [
+            "nodes"
+         ],
+         "label" : "Connected Nodes"
+      },
+      "c_port" : {
+         "cell" : [
+            "c_port"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Port",
+         "sort" : "portsort"
+      },
+      "c_power" : {
+         "cell" : [
+            "c_power"
+         ],
+         "column" : 1,
+         "groups" : [
+            "power"
+         ],
+         "label" : "PoE"
+      },
+      "c_pvid" : {
+         "cell" : [
+            "c_pvid"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Native VLAN"
+      },
+      "c_speed" : {
+         "cell" : [
+            "c_speed"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Speed (running)"
+      },
+      "c_speed_admin" : {
+         "cell" : [
+            "c_speed_admin"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Speed (configured)"
+      },
+      "c_ssid" : {
+         "cell" : [
+            "c_ssid"
+         ],
+         "column" : 1,
+         "groups" : [
+            "ssid"
+         ],
+         "label" : "SSID"
+      },
+      "c_stp" : {
+         "cell" : [
+            "c_stp"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Spanning Tree"
+      },
+      "c_tags" : {
+         "cell" : [
+            "c_tags"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Tags"
+      },
+      "c_type" : {
+         "cell" : [
+            "c_type"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Type"
+      },
+      "c_up" : {
+         "cell" : [
+            "c_up"
+         ],
+         "column" : 1,
+         "groups" : [],
+         "label" : "Up/Down Status"
+      },
+      "c_vmember" : {
+         "cell" : [
+            "c_vmember"
+         ],
+         "column" : 1,
+         "groups" : [
+            "vlans"
+         ],
+         "label" : "VLAN Membership"
+      },
+      "mac_format" : {
+         "cell" : [
+            "c_connected",
+            "c_nac_summary"
+         ],
+         "groups" : [
+            "nodes"
+         ]
+      },
+      "n_age" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : [
+            "nodes"
+         ]
+      },
+      "n_archived" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : [
+            "nodes",
+            "neighbors"
+         ]
+      },
+      "n_detailed_inventory" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : []
+      },
+      "n_dns" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : []
+      },
+      "n_inventory" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : []
+      },
+      "n_ip4" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : [
+            "nodes",
+            "neighbors"
+         ]
+      },
+      "n_ip6" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : [
+            "nodes",
+            "neighbors"
+         ]
+      },
+      "n_netbios" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : [
+            "nodes"
+         ]
+      },
+      "n_ssid" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : [
+            "nodes"
+         ]
+      },
+      "n_vendor" : {
+         "cell" : [
+            "c_connected"
+         ],
+         "groups" : [
+            "nodes"
+         ]
+      },
+      "p_fold_dotzero" : {
+         "cell" : [
+            "c_port"
+         ],
+         "groups" : []
+      },
+      "p_fold_subinterfaces" : {
+         "cell" : [
+            "c_port"
+         ],
+         "groups" : []
+      },
+      "p_hide1002" : {
+         "cell" : [
+            "c_vmember",
+            "status"
+         ],
+         "groups" : []
+      },
+      "p_include_hidden" : {
+         "cell" : [],
+         "groups" : [],
+         "reselect" : 1
+      },
+      "p_vlan_names" : {
+         "cell" : [
+            "c_pvid",
+            "c_vmember"
+         ],
+         "groups" : []
+      },
+      "port_state" : {
+         "cell" : [],
+         "groups" : [],
+         "reselect" : 1
+      }
+   }
+}

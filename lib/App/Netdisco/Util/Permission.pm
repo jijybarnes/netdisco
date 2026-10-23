@@ -18,6 +18,7 @@ our @EXPORT_OK = qw/
     check_acl_only
     acl_matches
     acl_matches_only
+    permitted_by_acl
 /;
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
@@ -114,6 +115,28 @@ This is an alias for L<acl_matches_only>.
 =cut
 
 sub check_acl_only { goto &acl_matches_only }
+
+=head2 permitted_by_acl( $ip | $object | \%hash | \@item_list, \%config )
+
+Whether a column or field that carries C<no> and C<only> ACLs in its own
+configuration, as a custom field or a plugin's device port column does, may be
+shown for C<$thing>: false when C<no> matches it, or when C<only> is given and
+does not. Fails safe, so with no thing or no config the answer is false.
+
+This is what the C<permitted_by_acl> template token calls, and what code
+preparing the same data for a browser must call too, so that a cell hidden in
+a template is never sent in a JSON response instead.
+
+=cut
+
+sub permitted_by_acl {
+  my ($thing, $config) = @_;
+  return false unless $thing and $config;
+
+  return false if acl_matches($thing, ($config->{no} || []));
+  return false unless acl_matches_only($thing, ($config->{only} || []));
+  return true;
+}
 
 =head2 check_acl( $ip | $object | \%hash | \@item_list, $acl_entry | \@acl )
 

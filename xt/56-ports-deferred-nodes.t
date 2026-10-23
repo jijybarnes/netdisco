@@ -4,64 +4,19 @@ use strict;
 use warnings;
 
 use Test::More 0.88;
-use lib 'xt/lib';
-use Test::Netdisco::Snapshot qw/render_template stash_for/;
 
 # Needs no database and no session: _deferred_node_params is free of
 # param(), so this and the assertions below that call it directly belong
 # outside any SKIP block, alongside xt/54's own param-free checks.
 require App::Netdisco::Web::Plugin::Device::Ports;
 
-# The committed snapshot cannot guard this: it leaves uri_for unstubbed, so
-# the route in the hx-get attribute renders blank there, and a snapshot only
-# records that some byte changed, not which element the change landed on.
-# This drives the over-threshold row directly and supplies uri_for as an
-# identity function to read the actual attributes and their placement.
+# The deferred block itself, its attributes and where _deferred_node_params
+# lands in its hx-get, is drawn by netdisco-ports.js now, and checked in
+# xt/js/ports-table.test.js. What stays here is the querystring, which is
+# built in Perl.
 
-my $stash = stash_for('ajax/device/ports.tt');
-$stash->{uri_for} = sub { $_[0] };
-$stash->{device} = { ip => '10.0.0.1' };
-
-my ($html, $error) = render_template('ajax/device/ports.tt', $stash);
-is $error, undef, 'renders' or diag $error;
-
-like $html, qr/hx-get="[^"]*\/ajax\/content\/device\/port\/nodes[^"]*"/,
-  'the deferred block fetches the one-port route';
-like $html, qr/hx-headers='\{"X-Requested-With": "XMLHttpRequest"\}'/,
-  'the deferred block sends the XHR header';
-like $html, qr/hx-target="this"/, 'it swaps into itself';
-# htmx binds a trigger once, to the rows in the DOM at the time, and DataTables
-# holds only the current page, so a trigger here would bind on page one alone.
-like $html, qr/hx-trigger="none"/,
-  'htmx owns the request but not the trigger, which is delegated';
-
-# The spinner sits inside the swap region, so a successful load replaces it and
-# the failure handler has to write it back for a retry to show one.
-like $html, qr/class="[^"]*\bnd_nodes-deferred\b[^"]*"/,
-  'the deferred block carries the class the failure handler keys on';
-like $html, qr/<span class="htmx-indicator"><i class="fas fa-spinner fa-spin"><\/i> Waiting for results\.\.\.<\/span>/,
-  'the deferred block ships a spinner as its initial content';
-
-# Every attribute on the element itself. htmx 4.0 makes inheritance explicit,
-# so an attribute inherited from a parent will not survive that upgrade.
-my ($div) = $html =~ m/(<div class="nd_collapsing[^>]*>)/;
-like $div, qr/hx-get=/,     'hx-get is on the div, not inherited';
-like $div, qr/hx-headers=/, 'hx-headers is on the div, not inherited';
-
-# The regexes above match on the route path alone and would still pass if
-# the n_*/mac_format suffix were silently dropped: _deferred_node_params
-# builds that string in Perl, but the template just interpolates it
-# unfiltered, relying on AUTO_FILTER to html-escape it in the attribute.
-$stash->{deferred_node_params} = '&n_dns=1&mac_format=cisco';
-my ($html2, $error2) = render_template('ajax/device/ports.tt', $stash);
-is $error2, undef, 'renders with deferred_node_params set' or diag $error2;
-like $html2, qr/hx-get="[^"]*&amp;n_dns=1&amp;mac_format=cisco"/,
-  'deferred_node_params lands in hx-get, html-escaped';
-
-# The assertion above sets $stash->{deferred_node_params} directly and never
-# calls _deferred_node_params itself, so it cannot catch a regression inside
-# that function (deleting its mac_format branch entirely, for instance).
-# These call it directly instead.
+# Called directly, so that a regression inside the function (deleting its
+# mac_format branch entirely, for instance) is caught here.
 my $qs_some = App::Netdisco::Web::Plugin::Device::Ports::_deferred_node_params(
   1, 0, 1, 0, 1, 0, 0, 0, 'Cisco');
 like $qs_some, qr/&n_ip4=1/,  'n_ip4 on is carried';

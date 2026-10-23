@@ -15,8 +15,9 @@
 // the id of the application/json block holding the rows, and data-nd-admin
 // tells the subnet renderer whether to show the admin tools.
 //
-// JSON cannot carry a function, so a column's render and a table's
-// drawCallback or initComplete are named here and referenced by name. Each
+// JSON cannot carry a function, so a column's render and createdCell and a
+// table's drawCallback or initComplete are named here and referenced by name.
+// A page's own script may add entries to the two registries. Each
 // entry is a factory: it takes the arguments the JSON gives it and the
 // table's URL prefixes, and returns the function DataTables calls.
 
@@ -801,6 +802,8 @@ const ndTables = (function () {
     });
     (config.columns || []).forEach(function (col) {
       if (col.render) col.render = resolveRenderer(col.render, urls, table);
+      // a column's createdCell is a callback like drawCallback, named the same way
+      if (col.createdCell) col.createdCell = resolveCallback(col.createdCell, urls, table);
     });
     if (config.drawCallback) config.drawCallback = resolveCallback(config.drawCallback, urls, table);
     if (config.initComplete) config.initComplete = resolveCallback(config.initComplete, urls, table);

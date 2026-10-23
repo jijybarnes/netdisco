@@ -13,7 +13,6 @@ use warnings;
 use Test::More 0.88;
 use NetAddr::MAC ();
 use lib 'xt/lib';
-use Test::Netdisco::Snapshot 'render_template';
 
 {
     package NetdiscoSchema;
@@ -333,6 +332,11 @@ App::Netdisco::Web::Plugin::Device::Ports::_augment_neighbor_search([$inventorie
 like $inventoried->{nodes_search}, qr/WS-C3560/,
   'the inventory string is appended when n_inventory is on';
 
+# In the pane's rows the browser adds the port's own neighbor identity to the
+# shadow itself, since whether the neighbors are on screen is something it
+# changes by itself: see xt/js/ports-table.test.js. A site's own template
+# cannot, and has it added by the function above.
+
 # The nodes cell renders manufacturer.abbrev under n_vendor, and the shadow
 # replaces that cell's search text wholesale, so the abbrev has to be in it or
 # a vendor stops being findable on any port. Its own fixture, deliberately: the
@@ -418,25 +422,8 @@ SKIP: {
       'and the Sun form, whose octets lose their leading zeros';
 }
 
-# The shadow is only reachable if DataTables sources the column's filter text
-# from data-search, and it decides that from tbody tr:first-child alone, for the
-# whole column. Emitting the attribute on the collapsed rows only, which is what
-# this cell used to do, left the column reading rendered text and every shadow
-# ignored, while every Perl assertion above still passed. The fixture puts one
-# row over the collapse threshold and one under it, so a condition creeping back
-# onto the attribute fails here.
-subtest 'ports_tt__every_connected_nodes_cell__carries_data_search' => sub {
-    my ($html, $error) = render_template('ajax/device/ports.tt');
-    is $error, undef, 'renders' or return;
-
-    my (undef, @rows) = split m/<tr\b/, $html;
-    my @node_cells = grep { m/nd_nodes-total|nd_div-closer|data-search/ } @rows;
-    cmp_ok scalar @node_cells, '>', 1,
-      'the fixture renders more than one row carrying a nodes cell';
-
-    my $with_attr = grep { m/<td[^>]*\sdata-search="/ } @node_cells;
-    is $with_attr, scalar @node_cells,
-      'every row with a nodes cell carries data-search, not just the collapsed ones';
-};
+# The shadow reaches the filter through netdisco-ports.js, which hands it to
+# DataTables as the connected cell's search text: xt/js/ports-table.test.js
+# covers that, the template having no rows of its own any more.
 
 done_testing;

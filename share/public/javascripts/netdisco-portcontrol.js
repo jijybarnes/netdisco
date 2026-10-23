@@ -172,6 +172,11 @@ function port_control (e) {
     .then(function() {
       ndToast.info('Submitted change request');
       if (! e.classList.contains('fa-bullseye')) applyPortControlResult(e, td);
+      // the Ports table draws its cells from row data, which netdisco-ports.js
+      // brings into step with what the cell now shows
+      td.dispatchEvent(new CustomEvent('nd:portcontrol', { bubbles: true, detail: {
+        field: body.get('field'), value: body.get('value'), action: body.get('action')
+      }}));
     }, function() {
       ndToast.error('Failed to submit change request');
       resetCellContent(td);

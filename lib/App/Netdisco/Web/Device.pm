@@ -58,16 +58,24 @@ hook 'before_template' => sub {
       $tokens->{"${opt}_lkp"} = { map { $_ => 1 } @$p };
   }
 
-  return if param('reset')
-    or not var('sidebar_key') or (var('sidebar_key') ne 'device_ports');
+  return if param('reset');
+  remember_ports_form();
+};
 
-  # update cookie from params we just recieved in form submit
+# update cookie from params we just recieved in form submit. Called by the
+# Ports data route too, which renders no template: the pane changes its own
+# columns without one, and the options it ends up with are the ones the next
+# visit should open with.
+sub remember_ports_form {
+  return if not var('sidebar_key') or (var('sidebar_key') ne 'device_ports');
+  my $defaults = var('sidebar_defaults')->{'device_ports'} or return;
+
   my $uri = URI->new();
   foreach my $key (keys %{ $defaults }) {
     $uri->query_param($key => param($key));
   }
   cookie('nd_ports-form' => $uri->query(), expires => '365 days');
-};
+}
 
 get '/device' => require_login sub {
     my $q = param('q');
