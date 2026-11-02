@@ -21,6 +21,9 @@ set(
   '_admin_order'  => [],
   '_reports_menu' => {},
   '_reports' => {},
+  # the paths plugins registered, last first, where each web interface looks
+  # for the plugin's views-NAME (App::Netdisco::Web::UI)
+  '_plugin_template_roots' => [],
   '_report_order' => [qw/Device Port IP Node VLAN Network Wireless/, 'My Reports'],
 );
 
@@ -36,6 +39,7 @@ register 'register_template_path' => sub {
 
   unshift @{ config->{engines}->{netdisco_template_toolkit}->{INCLUDE_PATH} },
        dir($path, 'views')->stringify;
+  unshift @{ setting('_plugin_template_roots') }, dir($path)->stringify;
 };
 
 sub _register_include {
@@ -292,6 +296,25 @@ Admin Menu function (job control, manual topology, pseudo devices)
 =back
 
 See L<https://github.com/netdisco/netdisco/wiki/Web-Plugins> for details.
+
+=head1 Web interfaces
+
+Everything a plugin registers is used by every web interface (see
+L<App::Netdisco::Web::UI>): navigation items, reports, admin tasks, device and
+search tabs (with their sidebars), device details, CSS and JavaScript, and
+device port columns.
+
+=over 4
+
+=item *
+
+An interface that redraws a page draws it from other data than the classic
+one, so a plugin's classic template for that page cannot stand in for it. A
+plugin overrides an interface's own templates from a F<views-NAME> directory
+beside the F<views> one given to C<register_template_path>. Netdisco says at
+startup which classic overrides an interface does not use.
+
+=back
 
 =cut
 

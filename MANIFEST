@@ -255,6 +255,7 @@ lib/App/Netdisco/Web/Static.pm
 lib/App/Netdisco/Web/Statistics.pm
 lib/App/Netdisco/Web/Theme.pm
 lib/App/Netdisco/Web/TypeAhead.pm
+lib/App/Netdisco/Web/UI.pm
 lib/App/Netdisco/Worker/Actions.pm
 lib/App/Netdisco/Worker/Loader.pm
 lib/App/Netdisco/Worker/Plugin.pm
@@ -642,6 +643,7 @@ share/views/device.tt
 share/views/externallinks.tt
 share/views/index.tt
 share/views/inventory.tt
+share/views/layouts/_web_ui_switch.tt
 share/views/layouts/main.tt
 share/views/layouts/noop.tt
 share/views/password.tt
