@@ -52,8 +52,10 @@ web_home: '/inventory'
 web_theme: auto
 default_web_ui: classic
 # names of web interfaces other than the classic one, found as views-NAME
-# (see App::Netdisco::Web::UI); none are bundled
-web_uis: []
+# (see App::Netdisco::Web::UI). The modern one is bundled; remove it to leave
+# it out entirely.
+web_uis:
+  - modern
 web_plugins:
   - Inventory
   - Report::PortVLANMismatch

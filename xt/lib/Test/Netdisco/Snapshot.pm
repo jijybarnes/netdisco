@@ -152,7 +152,7 @@ too, and one of the three reports hidden, as C<portlog> is in production; and
 an admin list holding a task, a divider and a second task. Tags and labels are
 the ones the shipped plugins register, so a reader can find each one in
 C<lib/App/Netdisco/Web/Plugin/>. The account menu's switch to another web
-interface is given a stand-in one, as C<web_uis> would register it.
+interface is given the modern one, as the shipped C<web_uis> registers it.
 
 =item C<ajax/device/details.tt>
 
@@ -345,7 +345,7 @@ sub stash_for {
   }
 
   # the item that moves a browser to another interface, as the classic menu
-  # includes it for each other interface
+  # includes it for the modern one
   return { target => 'modern', label => 'Try the new interface',
            title => 'Switch this browser to the new interface' }
     if $view eq 'layouts/_web_ui_switch.tt';

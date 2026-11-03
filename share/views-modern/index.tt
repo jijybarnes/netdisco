@@ -1,0 +1,176 @@
+[%# The modern home page. Everything the classic one offers is here, with the
+    hooks netdisco.js drives it through: the messages, signing in (#loginuser),
+    the search (#nqbody, its typeahead and its "Search ..." menu), the admin's
+    discover form (#discodevs, the ping sweeps) and the System Information
+    panel (#nd_stats). Signed in, it adds the network at a glance, nd2_home
+    (App::Netdisco::Web::HomePage). -%]
+[% BLOCK alerts %]
+  [% IF params.login_failed %]<div class="alert alert-danger alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>Incorrect username or password, please try again.</div>[% END %]
+  [% IF params.logout %]<div class="alert alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>You are now logged out.</div>[% END %]
+  [% IF params.nosuchdevice %]<div class="alert alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>Sorry, no such device is known.</div>[% END %]
+  [% IF vars.notfound %]<div class="alert alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>Sorry, page not found.&nbsp;
+    <a href="https://github.com/netdisco/netdisco/issues/new" target="_blank"><i class="fas fa-bug"></i>&nbsp;Report a Bug?</a></div>[% END %]
+  [% IF settings.login_banner_message AND NOT session.logged_in_user %]<div class="alert alert-info alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> [% settings.login_banner_message | none %]</div>[% END %]
+  [% IF settings.suggest_guest AND NOT session.logged_in_user %]<div class="alert alert-info alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>Guest access is available by entering username &quot;guest&quot; and password &quot;guest&quot;.</div>[% END %]
+[% END %]
+
+[% IF NOT session.logged_in_user %]
+<div class="nd2-login">
+  [% PROCESS alerts %]
+  <section class="nd2-card nd2-login-card">
+    [% IF settings.login_logo %]<img class="nd2-login-logo" src="[% settings.login_logo | none %]" alt="Login Logo" />[% END %]
+    <h1>Welcome to Netdisco</h1>
+    <p class="nd2-muted">Netdisco is an Open Source management tool designed for network administrators.</p>
+    <form class="nd_login-form nd2-login-form" method="post" action="[% uri_for('/login') | none %]">
+      <label for="loginuser">Username</label>
+      <input id="loginuser" class="form-control" name="username" type="text" required="required" autocomplete="username" autofocus/>
+      <label for="loginpass">Password</label>
+      <input id="loginpass" class="form-control" name="password" type="password" required="required" autocomplete="current-password"/>
+      <button type="submit" class="btn btn-primary">Log In</button>
+      [% IF params.return_url %]<input type="hidden" name="return_url" value="[% params.return_url | html_entity %]"/>[% END %]
+    </form>
+  </section>
+</div>
+[% ELSE %]
+[% SET h = nd2_home %]
+<div class="nd2-page nd2-home">
+  [% PROCESS alerts %]
+
+  <section class="nd2-home-search">
+    <form method="get" action="[% uri_for('/search') | none %]" role="search">
+      <div class="nd2-home-searchbox">
+        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+        <input placeholder="Find anything: a device, an IP, a MAC, a VLAN, a port…" class="form-control" id="nqbody" name="q" type="search" autocomplete="off"
+          aria-label="Search"
+          data-nd-typeahead="/ajax/data/devicename/typeahead"
+          data-nd-typeahead-min="3" data-nd-typeahead-first
+          data-nd-typeahead-menu="nd_search-suggestions"/>
+        <input name="firstsearch" type="hidden" value="on">
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Search</button>
+          <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Search in"></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            [% FOREACH t IN settings._search_tabs %]
+            [% NEXT IF t.hidden %]
+            <li><a class="dropdown-item nd_navsearchgo-specific" href="" data-tab="[% t.tag | html_entity %]">Search [% t.label | html_entity %]s</a></li>
+            [% END %]
+          </ul>
+        </div>
+      </div>
+    </form>
+    <p class="nd2-muted nd2-home-hint">Or press <kbd>Ctrl</kbd> <kbd>K</kbd> anywhere to jump to a device, a port, a report.</p>
+  </section>
+
+  [% IF h %]
+  [% SET d = h.devices %][% SET p = h.ports %][% SET j = h.jobs %][% SET s = h.statistics %]
+  <section class="nd2-tiles" aria-label="The network at a glance">
+    <a class="nd2-tile" href="[% uri_for('/devices') | none %]">
+      <small>Devices</small><b>[% d.total | html_entity %]</b><span class="nd2-muted">known to Netdisco</span></a>
+    <a class="nd2-tile[% ' nd2-tile-bad' IF d.failing %]" href="[% uri_for('/devices') | none %]?health=failing">
+      <small>Unreachable</small><b>[% d.failing | html_entity %]</b><span class="nd2-muted">the backend cannot reach</span></a>
+    <a class="nd2-tile[% ' nd2-tile-warn' IF d.stale %]" href="[% uri_for('/devices') | none %]?sort=last_discover">
+      <small>Not discovered lately</small><b>[% d.stale | html_entity %]</b><span class="nd2-muted">in [% d.stale_days | html_entity %] days</span></a>
+    <div class="nd2-tile">
+      <small>Ports up</small><b>[% p.up | html_entity %]</b><span class="nd2-muted">of [% p.total | html_entity %]</span></div>
+    <div class="nd2-tile" title="As the statistics job last counted them">
+      <small>Active nodes</small><b>[% IF s %][% s.nodes_active | html_entity %][% ELSE %]—[% END %]</b>
+      <span class="nd2-muted">[% IF s %]as of [% s.day | html_entity %][% ELSE %]statistics never compiled[% END %]</span></div>
+    [% IF user_has_role('admin') %]<a class="nd2-tile[% ' nd2-tile-bad' IF j.failed_today %]" href="[% uri_for('/admin/jobqueue') | none %]?firstsearch=on">[% ELSE %]<div class="nd2-tile">[% END %]
+      <small>Job queue</small><b>[% j.queued + j.running | html_entity %]</b>
+      <span class="nd2-muted">[% j.running | html_entity %] running · [% j.failed_today | html_entity %] failed today</span>
+    [% IF user_has_role('admin') %]</a>[% ELSE %]</div>[% END %]
+  </section>
+
+  <div class="nd2-home-cols">
+    <section class="nd2-card" aria-labelledby="nd2-home-attention">
+      <h3 id="nd2-home-attention">Needs attention</h3>
+      <div class="nd2-card-body">
+      [% SET anything = d.failing OR d.stale OR p.errdisabled OR p.half_duplex OR j.failed_today %]
+      [% IF anything %]
+        <ul class="nd2-alerts">
+          [% FOREACH dev IN d.unreachable %]
+          <li><span class="nd2-sev nd2-sev-critical" aria-hidden="true">!</span>
+            <div><a href="[% uri_for('/device') | none %]?q=[% dev.ip | uri %]"><b>[% dev.dns || dev.name || dev.ip | html_entity %]</b></a> is unreachable
+              <div class="nd2-muted nd2-mono">[% dev.ip | html_entity %]</div></div></li>
+          [% END %]
+          [% IF d.failing > d.unreachable.size %]
+          <li><span class="nd2-sev nd2-sev-critical" aria-hidden="true">!</span>
+            <div>and <a href="[% uri_for('/devices') | none %]?health=failing">[% d.failing - d.unreachable.size | html_entity %] more unreachable</a></div></li>
+          [% END %]
+          [% IF p.errdisabled %]
+          <li><span class="nd2-sev nd2-sev-critical" aria-hidden="true">!</span>
+            <div><b>[% p.errdisabled | html_entity %]</b> port[% 's are' IF p.errdisabled != 1 %][% ' is' IF p.errdisabled == 1 %] error disabled</div></li>
+          [% END %]
+          [% IF p.half_duplex %]
+          <li><span class="nd2-sev nd2-sev-warning" aria-hidden="true">!</span>
+            <div><b>[% p.half_duplex | html_entity %]</b> linked port[% 's run' IF p.half_duplex != 1 %][% ' runs' IF p.half_duplex == 1 %] half duplex, likely a duplex mismatch</div>
+            [% IF h.reports.half_duplex %]<a class="nd2-alert-link" href="[% uri_for('/report/' _ h.reports.half_duplex) | none %]?firstsearch=on">See them</a>[% END %]</li>
+          [% END %]
+          [% IF d.stale %]
+          <li><span class="nd2-sev nd2-sev-warning" aria-hidden="true">!</span>
+            <div><b>[% d.stale | html_entity %]</b> device[% 's have' IF d.stale != 1 %][% ' has' IF d.stale == 1 %] not been discovered in [% d.stale_days | html_entity %] days</div>
+            <a class="nd2-alert-link" href="[% uri_for('/devices') | none %]?sort=last_discover">See them</a></li>
+          [% END %]
+          [% IF j.failed_today %]
+          <li><span class="nd2-sev nd2-sev-serious" aria-hidden="true">!</span>
+            <div><b>[% j.failed_today | html_entity %]</b> job[% 's' IF j.failed_today != 1 %] failed in the last day</div>
+            [% IF user_has_role('admin') %]<a class="nd2-alert-link" href="[% uri_for('/admin/jobqueue') | none %]?firstsearch=on">Job queue</a>[% END %]</li>
+          [% END %]
+        </ul>
+      [% ELSE %]
+        <p class="nd2-muted"><i class="fas fa-check" aria-hidden="true"></i> Nothing: every device is reachable and was discovered lately, no port is error disabled or at half duplex, and no job failed today.</p>
+      [% END %]
+      </div>
+    </section>
+
+    <section class="nd2-card" aria-labelledby="nd2-home-recent">
+      <h3 id="nd2-home-recent">Recent devices</h3>
+      <div class="nd2-card-body">
+        [%# filled by home.js from the devices this browser opened (palette.js keeps them) -%]
+        <ul class="nd2-recent" data-nd2-recent data-nd2-uri-base="[% uri_base | html_entity %]"></ul>
+        <p class="nd2-muted nd2-recent-empty">The devices you open show up here.</p>
+      </div>
+    </section>
+  </div>
+  [% END %]
+
+  [% IF user_has_role('admin') %]
+  <section class="nd2-card" aria-labelledby="nd2-home-discover">
+    <h3 id="nd2-home-discover">Discover a device</h3>
+    <div class="nd2-card-body">
+      <form class="nd_login-form nd2-home-discover" method="post" action="[% uri_for('/admin/discodevs') | none %]">
+        <input placeholder="Device hostname, IP address, or IPv4 prefix >= /22" class="form-control" id="discodevs" name="device" required="required" value="[% params.device | html_entity %]" type="text" aria-label="Device to discover"/>
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Discover</button>
+          <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="More ways to discover"></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item nd_navsearchgo-specific" href="" data-action="pingsweep" data-timeout="0.1">Ping Sweep with Default Latency 50ms</a></li>
+            <li><a class="dropdown-item nd_navsearchgo-specific" href="" data-action="pingsweep" data-timeout="0.5">Ping Sweep with High Latency 250ms</a></li>
+          </ul>
+        </div>
+        <a target="_blank" href="https://github.com/netdisco/netdisco/wiki/Concepts#discovery-and-ping-sweep" title="What does this do?">
+          <i class="fas fa-circle-question" aria-hidden="true"></i><span class="visually-hidden">What does this do?</span></a>
+      </form>
+    </div>
+  </section>
+  [% END %]
+
+  <div class="accordion" id="accordion-statistics">
+    <div class="accordion-item">
+      <div class="accordion-header nd_sysinfo-heading">
+          <a class="d-block px-3 py-2" data-bs-toggle="collapse" data-bs-target="#collapse-stats" href="#">
+            <i class="fas fa-chevron-up nd_chevron"></i> System Information
+          </a>
+      </div>
+      <div id="collapse-stats" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <div id="nd_stats" data-nd-url="[% uri_for('/ajax/content/statistics') | html_entity %]">
+            <div id="nd_stats_status" class="col-md-2 offset-md-4 alert">
+              <i class="fas fa-spinner fa-spin"></i> Compiling statistics...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+[% END %]

@@ -1,0 +1,260 @@
+[%# The modern Details tab. The route and what it hands over are the classic
+    ones (App::Netdisco::Web::Plugin::Device::Details), and so are the hooks
+    the classic scripts drive this tab through: an editable fact is a <td> with
+    data-field and data-for-device whose text is the value (netdisco-portcontrol.js
+    posts it), the admin buttons are .nd_adminbutton in a <tr data-for-device>
+    with their data-form inputs (netdisco.js), and the snapshot and confirm
+    dialogs keep their ids. What changes is the layout: the facts are grouped
+    in cards, as the design has them, each a small table of rows. A plugin's
+    device details (register_device_details) are drawn with its own
+    device_details.tt, as in the classic tab. -%]
+[% PROCESS 'externallinks.tt' -%]
+[% SET user_can_port_control = user_has_role('port_control', d) %]
+[% SET dash = '<span class="nd2-muted">—</span>' %]
+[% SET job_label = { discover => 'Discover', arpnip => 'Arpnip', macsuck => 'Macsuck', nbtstat => 'NBTstat' } %]
+[%# a value, or a dash for one that is not known -%]
+[% BLOCK val %][% IF v.defined AND v != '' %][% v | html_entity %][% ELSE %][% dash | none %][% END %][% END %]
+<div class="nd2-details">
+
+  <section class="nd2-card" aria-labelledby="nd2-dt-identity">
+    <h3 id="nd2-dt-identity"><i class="fas fa-id-card" aria-hidden="true"></i> Identity</h3>
+    <table class="nd2-kvt"><tbody>
+      <tr><td>System name</td><td>[% INCLUDE val v = d.name %]</td></tr>
+      <tr><td>Canonical IP</td><td class="nd2-mono">[% d.ip | html_entity %]</td></tr>
+      <tr>
+        <td>Location
+        [% IF user_can_port_control %]<i class="far fa-pen-to-square nd_edit-icon nd_device-details-edit"></i>[% END %]</td>
+        [% IF user_can_port_control %]
+        <td class="nd_editable-cell nd2-editable" contenteditable="true" title="Click to change"
+          data-field="location" data-for-device="[% d.ip | html_entity %]">[% d.location | html_entity %]</td>
+        [% ELSIF d.location %]
+        <td><a title="Find similar devices"
+          href="[% search_device | none %]&q=[% d.location | uri %]&location=[% d.location | uri %]">[% d.location | html_entity %]</a></td>
+        [% ELSE %]<td>[% dash | none %]</td>[% END %]
+      </tr>
+      <tr>
+        <td>Contact
+        [% IF user_can_port_control %]<i class="far fa-pen-to-square nd_edit-icon nd_device-details-edit"></i>[% END %]</td>
+        [% IF user_can_port_control %]
+        <td class="nd_editable-cell nd2-editable" contenteditable="true" title="Click to change"
+          data-field="contact" data-for-device="[% d.ip | html_entity %]">[% d.contact | html_entity %]</td>
+        [% ELSE %]<td>[% IF d.contact %][% d.contact | html_entity %][% ELSE %][% dash | none %][% END %]</td>[% END %]
+      </tr>
+      <tr><td>Description</td><td>[% IF d.description %][% d.description | html_entity | html_line_break %][% ELSE %][% dash | none %][% END %]</td></tr>
+      <tr><td>Tags</td><td>
+        [% FOREACH t IN filtered_tags %]<span class="nd2-pill">[% t | html_entity %]</span> [% END %]
+        [% dash | none UNLESS filtered_tags.size %]</td></tr>
+      [% FOREACH config IN settings._extra_device_details %]
+      [% NEXT UNLESS permitted_by_acl(d, config) %]
+      [% NEXT IF config.hidden %]
+      <tr>
+        <td>[% config.label | html_entity %]
+          [% IF config.editable AND user_can_port_control %]<i class="far fa-pen-to-square nd_edit-icon nd_device-details-edit"></i>[% END %]</td>
+        [% TRY %]
+        <td>[% INCLUDE "plugin/${config.name}/device_details.tt" %]</td>
+        [% CATCH %]
+          [% CLEAR %]
+          [% IF config.editable AND user_can_port_control %]
+        <td class="nd_editable-cell nd2-editable" contenteditable="true" title="Click to change"
+          data-field="[% config.field | html_entity %]" data-for-device="[% d.ip | html_entity %]">
+          [% ELSE %]
+        <td>
+          [% END %]
+          [% FOREACH record IN d.${config.field} %][% record | html_entity %][% '<br />' IF loop.size > 1 %][% END %]
+        </td>
+        [% END %]
+      </tr>
+      [% END %]
+    </tbody></table>
+  </section>
+
+  <section class="nd2-card" aria-labelledby="nd2-dt-hardware">
+    <h3 id="nd2-dt-hardware"><i class="fas fa-microchip" aria-hidden="true"></i> Hardware</h3>
+    <table class="nd2-kvt"><tbody>
+      <tr><td>Vendor / model</td><td>
+        <a title="Find similar devices" href="[% search_device | none %]&q=[% d.vendor | uri %]&vendor=[% d.vendor | uri %]">[% d.vendor | html_entity %]</a>
+        /
+        <a title="Find similar devices" href="[% search_device | none %]&q=[% d.model | uri %]&model=[% d.model | uri %]">[% d.model | html_entity %]</a></td></tr>
+      <tr><td>Serial number[% 's' IF serials.size > 1 %]</td><td class="nd2-mono">
+        [% FOREACH s IN serials %]
+        <a href="[% uri_for('/report/moduleinventory') | none %]?class=chassis&matchall=on&serial=[% s | uri %]">[% s | html_entity %]</a>[% ' (primary)' IF s == d.serial AND serials.size > 1 %]<br />
+        [% END %]
+        [% dash | none UNLESS serials.size %]</td></tr>
+      <tr><td>Chassis ID</td><td class="nd2-mono">[% INCLUDE val v = d.chassis_id %]</td></tr>
+      <tr><td>MAC address</td><td class="nd2-mono">[% INCLUDE val v = d.mac %]</td></tr>
+      <tr><td>Fan</td><td>[% INCLUDE val v = d.fan %]</td></tr>
+      <tr><td>Power supplies</td><td>
+        [% IF d.ps1_type OR d.ps1_status %]PS1[% IF d.ps1_type %] ([% d.ps1_type | html_entity %])[% END %]: [% d.ps1_status | html_entity %]<br />[% END %]
+        [% IF d.ps2_type OR d.ps2_status %]PS2[% IF d.ps2_type %] ([% d.ps2_type | html_entity %])[% END %]: [% d.ps2_status | html_entity %][% END %]
+        [% dash | none UNLESS d.ps1_type OR d.ps1_status OR d.ps2_type OR d.ps2_status %]</td></tr>
+      [% IF p.size %]
+      <tr><td>PoE</td><td>
+        [% FOREACH m IN p %]
+        <div>Module [% m.module | html_entity %]: [% m.status | html_entity %],
+          [% m.poe_powered_ports | html_entity %] of [% m.poe_capable_ports | html_entity %] ports powered
+          ([% m.poe_disabled_ports | html_entity %] disabled, [% m.poe_errored_ports | html_entity %] in error),
+          [% m.poe_power_committed | html_entity %] of [% m.power | html_entity %] W committed</div>
+        [% END %]</td></tr>
+      [% END %]
+    </tbody></table>
+  </section>
+
+  <section class="nd2-card" aria-labelledby="nd2-dt-software">
+    <h3 id="nd2-dt-software"><i class="fas fa-code-branch" aria-hidden="true"></i> Software</h3>
+    <table class="nd2-kvt"><tbody>
+      <tr><td>OS / version</td><td>
+        <a title="Find similar devices" href="[% search_device | none %]&q=[% d.os | uri %]&os=[% d.os | uri %]">[% d.os | html_entity %]</a>
+        /
+        <a title="Find similar devices" href="[% search_device | none %]&q=[% d.os_ver | uri %]&os_ver=[% d.os_ver | uri %]">[% d.os_ver | html_entity %]</a></td></tr>
+      <tr><td>Uptime</td><td>[% IF d.uptime_age %][% d.uptime_age | html_entity %] <span class="nd2-muted">at the last poll</span>[% ELSE %][% dash | none %][% END %]</td></tr>
+      <tr><td>Layers</td><td><span class="nd2-layers" role="img" aria-label="OSI layers this device works at">
+        [% FOREACH n IN [1 .. 7] %][% SET bit = 8 - n %]<span class="[% d.layers.substr(bit, 1) ? 'nd2-on' : '' %]" title="Layer [% n %]">[% n %]</span>[% END %]
+      </span></td></tr>
+      <tr><td>SNMP class</td><td>[% IF d.snmp_class %]<a target="_blank" rel="noopener" href="https://metacpan.org/pod/[% d.snmp_class | uri %]">[% d.snmp_class | html_entity %]</a>[% ELSE %][% dash | none %][% END %]</td></tr>
+      <tr><td>VTP</td><td>[% IF d.vtp_mode OR d.vtp_domain %][% d.vtp_mode.ucfirst || 'n/a' | html_entity %] mode, domain [% d.vtp_domain || 'n/a' | html_entity %][% ELSE %][% dash | none %][% END %]</td></tr>
+      <tr><td>NAC / 802.1X</td><td>[% IF d.pae_is_enabled %]<span class="nd2-st nd2-st-up"><i aria-hidden="true"></i>Enabled</span>[% ELSE %][% dash | none %][% END %]</td></tr>
+    </tbody></table>
+  </section>
+
+  <section class="nd2-card" aria-labelledby="nd2-dt-discovery">
+    <h3 id="nd2-dt-discovery"><i class="fas fa-rotate" aria-hidden="true"></i> Discovery</h3>
+    <table class="nd2-kvt"><tbody>
+      <tr><td>First discovered</td><td>[% INCLUDE val v = d.first_seen_stamp %]</td></tr>
+      <tr><td>Last discover</td><td>[% INCLUDE val v = d.last_discover_stamp %]</td></tr>
+      <tr><td>Last arpnip</td><td>[% INCLUDE val v = d.last_arpnip_stamp %]</td></tr>
+      <tr><td>Last macsuck</td><td>[% INCLUDE val v = d.last_macsuck_stamp %]</td></tr>
+    </tbody></table>
+  </section>
+
+  <section class="nd2-card" aria-labelledby="nd2-dt-connect">
+    <h3 id="nd2-dt-connect"><i class="fas fa-up-right-from-square" aria-hidden="true"></i> Connect</h3>
+    <div class="nd2-card-body nd2-dt-links">
+      <a class="btn btn-outline-secondary btn-sm" href="ssh://[% d.ip | uri %]" target="_blank"><i class="fas fa-terminal"></i> SSH</a>
+      <a class="btn btn-outline-secondary btn-sm" href="telnet://[% d.ip | uri %]" target="_blank"><i class="fas fa-keyboard"></i> Telnet</a>
+      <a class="btn btn-outline-secondary btn-sm" href="https://[% d.ip | uri %]/" target="_blank" rel="noopener"><i class="fas fa-globe"></i> Web</a>
+      [% INCLUDE external_device_links item = d %]
+    </div>
+  </section>
+
+  [% IF user_has_role('admin') OR settings.enable_nonadmin_actions %]
+  <section class="nd2-card nd2-dt-admin" aria-labelledby="nd2-dt-admin">
+    <h3 id="nd2-dt-admin"><i class="fas fa-screwdriver-wrench" aria-hidden="true"></i> Actions</h3>
+    <table class="nd2-kvt"><tbody>
+    [% IF user_has_role('admin') %]
+    <tr data-for-device="[% d.ip | html_entity %]">
+      <td>Poll</td>
+      <td class="nd2-dt-actions">
+        [% FOREACH job IN [ ['discover', d.is_discoverable], ['arpnip', d.is_arpnipable], ['macsuck', d.is_macsuckable], ['nbtstat', d.is_macsuckable] ] %]
+        [% IF job.1 %]
+        <input type="hidden" data-form="[% job.0 | html_entity %]" value="[% d.ip | html_entity %]" name="device"/>
+        <button class="btn btn-outline-secondary btn-sm nd_adminbutton" name="[% job.0 | html_entity %]">[% job_label.${job.0} | html_entity %]</button>
+        [% ELSE %]
+        <button class="btn btn-outline-secondary btn-sm" disabled title="Not offered for this device: see its discover, macsuck and arpnip settings and the backend's skip list">[% job_label.${job.0} | html_entity %]</button>
+        [% END %]
+        [% END %]
+
+        <span class="dropdown">
+          <button class="nd_snap_btn btn [% has_snapshot ? 'btn-success' : 'btn-info' %] btn-sm dropdown-toggle" type="button" id="snapshotmenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Snapshot
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="snapshotmenu">
+            [% IF NOT d.is_pseudo %]
+            <input type="hidden" data-form="snapshot_req" value="[% d.ip | html_entity %]" name="device"/>
+            <li><a href="#" class="dropdown-item nd_adminbutton" name="snapshot_req"><i class="far fa-pen-to-square"></i> Create</a></li>
+            [% END %]
+            <li class='nd_snap_func [% 'disabled' UNLESS has_snapshot %]'><a class="dropdown-item" href="[% uri_for('/ajax/content/admin/snapshot_get') | none %]?device=[% d.ip | uri %]"><i class="fas fa-download"></i> Download</a></li>
+            [% IF NOT d.is_pseudo %]
+            <input type="hidden" data-form="snapshot_del" value="[% d.ip | html_entity %]" name="device"/>
+            <li class='nd_snap_func [% 'disabled' UNLESS has_snapshot %]'><a href="#" class="dropdown-item nd_adminbutton" name="snapshot_del"><i class="fas fa-trash-can"></i> Delete</a></li>
+            [% END %]
+          </ul>
+        </span>
+      </td>
+    </tr>
+    <tr data-for-device="[% d.ip | html_entity %]">
+      <td>Change</td>
+      <td class="nd2-dt-actions">
+        <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#nd_devrenumber" type="button">Change IP…</button>
+        <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#nd_devdel" type="button">Delete device…</button>
+
+        <div id="nd_devdel" class="nd_modal nd_deep-horizon modal fade" tabindex="-1"
+          role="dialog" aria-labelledby="nd_devdel-label" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3 id="nd_devdel-label">Delete [% d.dns || d.ip | html_entity %]?</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <ul>
+                  <li>A job will be queued to delete the device.</li>
+                  <li>All associated nodes may be removed from the database.</li>
+                </ul>
+                <textarea id="nd_devdel-log" class="form-control" rows="2" data-form="delete"
+                  placeholder="Enter a log message" name="extra"></textarea>
+                <label class="form-check mt-2">
+                  <input id="nd_devdel-archive" class="form-check-input" type="checkbox" data-form="delete" name="port">
+                  Archive the nodes rather than delete them
+                </label>
+                <input type="hidden" data-form="delete" value="[% d.ip | html_entity %]" name="device"/>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>
+                <button class="btn btn-danger nd_adminbutton" name="delete" data-bs-dismiss="modal">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="nd_devrenumber" class="nd_modal nd_deep-horizon modal fade" tabindex="-1"
+          role="dialog" aria-labelledby="nd_devrenumber-label" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3 id="nd_devrenumber-label">Change the IP of [% d.dns || d.ip | html_entity %]</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <ul>
+                  <li>This changes the primary IP of the device, to support migrations.</li>
+                  <li>It can be one of its interface addresses or a new one.</li>
+                  <li>No check is made that the new address is reachable.</li>
+                  <li>The change is queued as a backend job.</li>
+                  <li>The <a href="https://github.com/netdisco/netdisco/wiki/Configuration#device_identity"><code>device_identity</code></a> setting is safer and may work better.</li>
+                </ul>
+                <label>New IP address: <input class="form-control w-auto d-inline-block" list="interfaces" name="newip" data-form="renumber"/></label>
+                <datalist id="interfaces">
+                  [% FOREACH i IN interfaces %]
+                  <option value="[% i.alias | html_entity %]">[% i.dns | html_entity %]</option>
+                  [% END %]
+                </datalist>
+                <input type="hidden" data-form="renumber" value="[% d.ip | html_entity %]" name="device"/>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>
+                <button class="btn btn-danger nd_adminbutton" name="renumber" data-bs-dismiss="modal">Change IP</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    [% ELSE %]
+    <tr data-for-device="[% d.ip | html_entity %]">
+      <td>Poll</td>
+      <td class="nd2-dt-actions">
+        [% FOREACH job IN [ ['discover', 1], ['arpnip', d.layers.substr(5,1)], ['macsuck', d.layers.substr(6,1)], ['nbtstat', 1] ] %]
+        [% IF job.1 %]
+        <input type="hidden" data-form="[% job.0 | html_entity %]" value="[% d.ip | html_entity %]" name="device"/>
+        <button class="btn btn-outline-secondary btn-sm nd_nonadminbutton" name="[% job.0 | html_entity %]">[% job_label.${job.0} | html_entity %]</button>
+        [% ELSE %]
+        <button class="btn btn-outline-secondary btn-sm" disabled>[% job_label.${job.0} | html_entity %]</button>
+        [% END %]
+        [% END %]
+      </td>
+    </tr>
+    [% END %]
+    </tbody></table>
+  </section>
+  [% END %]
+</div>

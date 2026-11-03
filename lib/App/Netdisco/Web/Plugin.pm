@@ -334,8 +334,23 @@ C<web_uis>) says what the classic account menu reads for the switch to it:
 An interface that redraws a page draws it from other data than the classic
 one, so a plugin's classic template for that page cannot stand in for it. A
 plugin overrides an interface's own templates from a F<views-NAME> directory
-beside the F<views> one given to C<register_template_path>. Netdisco says at
-startup which classic overrides an interface does not use.
+(F<views-modern> for the modern interface) beside the F<views> one given to
+C<register_template_path>. Netdisco says at startup which classic overrides an
+interface does not use.
+
+=item *
+
+The modern interface draws a plugin port column with the plugin's own
+F<plugin/E<lt>nameE<gt>/device_port_column.tt> on the server, with C<row>,
+C<device> and C<config> as in the classic Ports tab, and its CSV values with
+F<device_port_column_csv.tt>, as there. It sorts and filters the column by its
+text, and after drawing the table fires C<nd2:ports-drawn> on the tab, for a
+plugin's script that works on the cells it drew.
+
+=item *
+
+A navigation item may name its icon on the modern interface's rail, as a Font
+Awesome name: C<icon =E<gt> 'fa-phone'>.
 
 =back
 
