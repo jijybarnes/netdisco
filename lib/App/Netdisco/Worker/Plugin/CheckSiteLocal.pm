@@ -4,8 +4,9 @@ use Dancer ':syntax';
 use App::Netdisco::Worker::Plugin;
 use aliased 'App::Netdisco::Worker::Status';
 
+use Path::Class 'dir';
 use App::Netdisco::Util::SiteLocal
-  qw/ site_local_paths scan_site_local scan_shadowed_files /;
+  qw/ site_local_paths scan_site_local scan_shadowed_files scan_ui_shadowed /;
 
 register_worker({ phase => 'main' }, sub {
   my @paths = site_local_paths();
@@ -14,7 +15,14 @@ register_worker({ phase => 'main' }, sub {
       return Status->done('No site-local template paths are configured.');
   }
 
-  my @findings = ( scan_shadowed_files({ paths => \@paths }),
+  # the overrides a web interface does not use (web_uis): the site's files only,
+  # a web plugin's views are not loaded here
+  my $shipped = setting('views') ? dir(setting('views'))->parent : undef;
+  my @uis = $shipped ? (map { scan_ui_shadowed({ name => $_, paths => \@paths,
+                                                 core => $shipped->subdir("views-$_")->stringify }) }
+                        grep { defined and not ref } @{ setting('web_uis') || [] }) : ();
+
+  my @findings = ( scan_shadowed_files({ paths => \@paths }), @uis,
                    scan_site_local({ paths => \@paths }) );
 
   if (! scalar @findings) {

@@ -51,8 +51,9 @@ path: '/'
 web_home: '/inventory'
 web_theme: auto
 default_web_ui: classic
+# names of web interfaces other than the classic one, found as views-NAME
+# (see App::Netdisco::Web::UI); none are bundled
 web_uis: []
-extra_web_uis: []
 web_plugins:
   - Inventory
   - Report::PortVLANMismatch

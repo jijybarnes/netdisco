@@ -152,8 +152,9 @@ use App::Netdisco::Web::Theme;
 use App::Netdisco::Web::UI;
 use App::Netdisco::Web::Search;
 use App::Netdisco::Web::Device;
-# the web interfaces other than classic (web_uis), before the web plugins: an
-# interface may answer a path in front of a plugin's route (App::Netdisco::Web::UI)
+# the web plugins of the interfaces other than classic (web_uis), before the web
+# plugins: an interface may answer a path in front of a plugin's route
+# (App::Netdisco::Web::UI)
 BEGIN { App::Netdisco::Web::UI::load_web_uis() }
 use App::Netdisco::Web::Report;
 use App::Netdisco::Web::API::Objects;
@@ -251,8 +252,7 @@ if (setting('template_paths') and ref [] eq ref setting('template_paths')) {
 }
 
 # the web interfaces' templates in front of all of the above (App::Netdisco::Web::UI)
-App::Netdisco::Web::UI::setup_web_uis(
-  (setting('template_paths') and ref [] eq ref setting('template_paths')) ? setting('template_paths') : []);
+App::Netdisco::Web::UI::setup_web_uis();
 
 # here rather than earlier because template_paths is only resolved above
 foreach my $finding (scan_shadowed_files(

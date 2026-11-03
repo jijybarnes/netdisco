@@ -752,6 +752,13 @@ xt/173-discover-port-properties-upsert.t
 xt/174-discover-wireless-upsert.t
 xt/175-discover-neighbor-columns.t
 xt/176-discover-port-tags-clear.t
+xt/500-web-ui-resolve.t
+xt/501-web-ui-app.t
+xt/502-web-ui-bad-default.t
+xt/516-web-ui-route-in-front.t
+xt/517-web-ui-none.t
+xt/518-layout-from-template-paths.t
+xt/519-ui-shadowed-scan.t
 xt/20-checkacl.t
 xt/21-check_acl_no_ipaddr_only.t
 xt/30-backend-workers.t
@@ -872,6 +879,7 @@ xt/lib/App/NetdiscoX/Worker/Plugin/TestSeven.pm
 xt/lib/App/NetdiscoX/Worker/Plugin/TestSix.pm
 xt/lib/App/NetdiscoX/Worker/Plugin/TestThree.pm
 xt/lib/App/NetdiscoX/Worker/Plugin/TestTwo.pm
+xt/lib/App/NetdiscoX/Web/Plugin/UI/Mine.pm
 xt/lib/Test/Netdisco/CssRules.pm
 xt/lib/Test/Netdisco/MungerProbe.pm
 xt/lib/Test/Netdisco/Snapshot.pm

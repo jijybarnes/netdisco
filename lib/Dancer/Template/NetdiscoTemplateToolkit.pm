@@ -30,13 +30,14 @@ sub view {
     return;
 }
 
-# Dancer looks for a layout only under the views setting. The interface overlay
-# is tried first so that it can bring its own layouts; template_paths still do
-# not apply to layouts, as before.
+# Dancer looks for a layout only under the views setting, so a site's
+# template_paths and a plugin's views could override every template but the
+# layouts. They are searched here, in the order of INCLUDE_PATH: the web
+# interface's own first, so that it can bring its layout, then the site's.
 sub layout {
     my ($self, $layout, $tokens, $content) = @_;
 
-    foreach my $dir (@{ $self->_overlay_paths }) {
+    foreach my $dir ($self->_search_paths) {
         foreach my $name ($self->_template_name($layout)) {
             my $layout_path = path($dir, 'layouts', $name);
             return $self->render($layout_path, {%$tokens, content => $content})
@@ -45,11 +46,6 @@ sub layout {
     }
 
     return $self->SUPER::layout($layout, $tokens, $content);
-}
-
-sub _overlay_paths {
-    return [] unless $INC{'App/Netdisco/Web/UI.pm'};
-    return App::Netdisco::Web::UI::ui_include_paths();
 }
 
 1;

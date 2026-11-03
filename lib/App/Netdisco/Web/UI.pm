@@ -7,10 +7,12 @@ use Module::Load ();
 use URI;
 use Try::Tiny;
 
+use App::Netdisco::Util::SiteLocal qw/site_local_paths ui_dirs_for scan_ui_shadowed/;
+
 use base 'Exporter';
 our @EXPORT_OK = qw/
-  register_web_ui web_ui web_ui_names valid_web_ui current_web_ui
-  ui_include_paths ui_dirs_for ui_shadowed_overrides web_ui_module
+  web_ui web_ui_names valid_web_ui current_web_ui
+  ui_include_paths web_ui_plugin_names
   safe_back_path back_from_referer
 /;
 
@@ -26,20 +28,28 @@ template the interface does not provide falls through to the classic one, so
 an interface can redraw the pages it wants and leave the rest as they are,
 inside its own layout.
 
-An interface other than classic comes as a module, named in C<web_uis> (or a
-site's C<extra_web_uis>) the way web plugins are named in C<web_plugins>:
-C<Foo> is C<App::Netdisco::Web::UI::Foo>, C<X::Mine> is
-C<App::NetdiscoX::Web::UI::Mine> (looked for under F<site_plugins> too), and
-C<+Some::Module> is that module. The module calls L</register_web_ui> and
-brings whatever else the interface needs on the server: routes of its own,
-hooks that hand its templates more data. The core routes do not know about
-it.
+This is the site-local mechanism (C<template_paths>, F<nd-site-local>) with a
+choice of which set a browser gets. An interface is found the way a theme is:
+C<web_uis> names it, and a F<views-NAME> directory is looked for where
+site-local files already are: beside F<share/views> (what Netdisco ships),
+beside or inside each C<template_paths> entry and F<nd-site-local/share>
+(what a site writes), and beside the F<views> directory of a web plugin
+(C<register_template_path>). The directories are laid over the classic ones in
+that order, a site's first. A name with no such directory is reported at
+startup and left out.
 
-By convention an interface named C<mine> keeps its templates in
-F<views-mine> and its scripts and styles under F</mine/> in the public
-directory. A site (C<template_paths>) or a web plugin
-(C<register_template_path>) overrides its templates from a F<views-mine>
-directory beside its F<views> one.
+What an interface needs on the server is an ordinary web plugin, loaded before
+those of C<web_plugins>: C<mine> is C<App::Netdisco::Web::Plugin::UI::Mine>,
+else C<App::NetdiscoX::Web::Plugin::UI::Mine> (from F<site_plugins>). It
+may be absent, for an interface that is only templates. It is a plugin like
+the others, with routes of its own and hooks that hand its templates more
+data; the core routes do not know about it. C<register_web_ui>, which
+L<App::Netdisco::Web::Plugin> provides, sets what the classic menu says for
+the switch to it.
+
+By convention an interface named C<mine> keeps its scripts and styles under
+F</mine/> in the public directory, F<share/public/mine> or, for a site,
+F<nd-site-local/share/public/mine>.
 
 C<default_web_ui> names the interface a browser gets until its user picks one.
 The pick is kept in the C<nd_web_ui> cookie rather than in the users table, so
@@ -51,39 +61,19 @@ lost harmlessly when the cookie is.
 use constant COOKIE => 'nd_web_ui';
 
 # name => { name, views, switch_label, switch_title, overrides }
+#   views: the directory Netdisco ships for the interface, if it exists
+#   overrides: the site's and plugins' directories for it, first first
 my %UI = (
   classic => { name => 'classic', views => undef },
 );
 
+my $VALID_NAME = qr/\A[a-z][a-z0-9_]*\z/;
+
 =head1 FUNCTIONS
-
-=head2 register_web_ui( \%config )
-
-Declares an interface: C<name>, the one the cookie and C<default_web_ui> use;
-C<views>, its directory of templates; and, for the classic interface's menu,
-C<switch_label> and C<switch_title>, what the item that moves a browser to it
-says. A name already registered is replaced.
-
-=cut
-
-sub register_web_ui {
-  my $config = shift;
-  my $name = $config->{name};
-  die "register_web_ui needs a name\n" unless defined $name and $name =~ m/^[a-z][a-z0-9_]*$/;
-  die "the classic interface is built in\n" if $name eq 'classic';
-  $UI{$name} = {
-    name         => $name,
-    views        => (defined $config->{views} ? "$config->{views}" : undef),
-    switch_label => ($config->{switch_label} // "Try the $name interface"),
-    switch_title => ($config->{switch_title} // "Switch this browser to the $name interface"),
-    overrides    => [],
-  };
-  return $UI{$name};
-}
 
 =head2 web_ui( $name )
 
-The interface registered under C<$name>, or C<undef>.
+The interface declared under C<$name>, or C<undef>.
 
 =cut
 
@@ -96,37 +86,59 @@ sub valid_web_ui {
   return (defined $name and not ref $name and exists $UI{$name}) ? 1 : 0;
 }
 
-=head2 web_ui_module( $entry )
+=head2 web_ui_plugin_names( $name )
 
-Pure: the module a C<web_uis> entry names, as described above.
+Pure: the web plugin modules that serve interface C<$name>, in the order
+they are tried.
 
 =cut
 
-sub web_ui_module {
-  my $entry = shift;
-  return undef unless defined $entry and length $entry and not ref $entry;
-  return $1 if $entry =~ m/^\+(.+)$/;
-  return "App::NetdiscoX::Web::UI::$1" if $entry =~ m/^X::(.+)$/;
-  return "App::Netdisco::Web::UI::$entry";
+sub web_ui_plugin_names {
+  my $name = shift;
+  return () unless defined $name and not ref $name and $name =~ $VALID_NAME;
+  my $camel = ucfirst $name;
+  return ("App::Netdisco::Web::Plugin::UI::$camel",
+          "App::NetdiscoX::Web::Plugin::UI::$camel");
 }
 
 =head2 load_web_uis()
 
-Loads the modules C<web_uis> and C<extra_web_uis> name. One that cannot be
-loaded is reported and left out rather than stopping the web server: the
-classic interface works without it.
+Declares the interfaces C<web_uis> names and loads their web plugins. A
+plugin that is not there is no fault; one that cannot be loaded is reported
+and left out rather than stopping the web server: the classic interface works
+without it. A name that is not a valid interface name is reported and ignored.
 
 =cut
 
 sub load_web_uis {
-  my @core  = @{ (ref [] eq ref setting('web_uis')) ? setting('web_uis') : [] };
-  my @extra = @{ (ref [] eq ref setting('extra_web_uis')) ? setting('extra_web_uis') : [] };
-  unshift @INC, dir(($ENV{NETDISCO_HOME} || $ENV{HOME}), 'site_plugins')->stringify if @extra;
+  my @names = @{ (ref [] eq ref setting('web_uis')) ? setting('web_uis') : [] };
+  unshift @INC, dir(($ENV{NETDISCO_HOME} || $ENV{HOME}), 'site_plugins')->stringify if @names;
 
-  foreach my $entry (@core, @extra) {
-    my $module = web_ui_module($entry) or next;
-    try { Module::Load::load($module) }
-    catch { warning sprintf 'web interface %s could not be loaded: %s', $entry, $_ };
+  foreach my $name (@names) {
+    unless (defined $name and not ref $name and $name =~ $VALID_NAME and $name ne 'classic') {
+      warning sprintf q{web_uis entry '%s' is not an interface name: use lower case letters,}
+        . q{ digits and '_', starting with a letter, and not 'classic'. It is ignored.},
+        (defined $name ? $name : 'undef');
+      next;
+    }
+
+    $UI{$name} ||= {
+      name         => $name,
+      views        => dir(setting('views'))->parent->subdir("views-$name")->stringify,
+      switch_label => "Try the $name interface",
+      switch_title => "Switch this browser to the $name interface",
+      overrides    => [],
+    };
+
+    foreach my $module (web_ui_plugin_names($name)) {
+      my $file = join('/', split /::/, $module) . '.pm';
+      try { Module::Load::load($module) }
+      catch {
+        # a plugin the interface does not have is not a problem
+        warning sprintf 'web interface %s could not be loaded: %s', $name, $_
+          unless m/^Can't locate \Q$file\E in \@INC/;
+      };
+    }
   }
 }
 
@@ -164,7 +176,7 @@ rather than being fixed when the engine is built.
 
 These are, in order: the overrides of the interface's templates (a site's,
 then each plugin's, the last registered first, as for F<views>), then the
-interface's own directory. A template none of them has falls through to the
+directory Netdisco ships for it, if any. A template none of them has falls through to the
 classic chain behind, site, plugins, then F<share/views>, so a site or a
 plugin overriding a template the interface does not draw itself is used by
 every interface. The classic interface adds nothing.
@@ -173,92 +185,47 @@ every interface. The classic interface adds nothing.
 
 sub ui_include_paths {
   my $ui = $UI{ current_web_ui() } or return [];
-  return [] unless defined $ui->{views};
-  return [ @{ $ui->{overrides} || [] }, $ui->{views} ];
+  return [] if $ui->{name} eq 'classic';
+  return [ @{ $ui->{overrides} || [] }, (defined $ui->{views} ? $ui->{views} : ()) ];
 }
 
-=head2 ui_dirs_for( $name, @template_paths )
-
-Where a site's templates for interface C<$name> sit, for each of its
-C<template_paths>: beside a directory named F<views> (F<.../share/views> gives
-F<.../share/views-NAME>), else inside it. Only those that exist, each once, in
-the given order.
-
-=cut
-
-sub ui_dirs_for {
-  my ($name, @paths) = @_;
-  my %seen;
-  return grep { -d $_ and not $seen{$_}++ }
-         map  { my $d = dir($_);
-                ($d->basename eq 'views' ? $d->parent->subdir("views-$name")
-                                         : $d->subdir("views-$name"))->stringify }
-         grep { defined and length } @paths;
-}
-
-=head2 ui_shadowed_overrides( \@classic_dirs, \@override_dirs, $views )
-
-The classic overrides an interface does not use: each template under one of
-C<@classic_dirs> (a site's C<template_paths>, a plugin's views) whose name the
-interface draws itself in C<$views> and that none of C<@override_dirs>
-overrides for it. The interface's template is drawn from other data than the
-classic one, so the classic override cannot stand in for it. Returns
-C<[ dir, template ]> pairs, sorted.
-
-=cut
-
-sub ui_shadowed_overrides {
-  my ($classic, $overrides, $core) = @_;
-  return () unless defined $core and -d $core;
-
-  my %drawn;
-  dir($core)->recurse(callback => sub {
-    my $f = shift;
-    return if $f->is_dir or $f->basename !~ m/\.tt$/;
-    $drawn{ $f->relative($core)->as_foreign('Unix')->stringify } = 1;
-  });
-  # a layout is never looked up under template_paths, so overriding one there
-  # changes nothing in either interface
-  delete $drawn{$_} for grep { m{^layouts/} } keys %drawn;
-
-  my @found;
-  foreach my $c (grep { defined and -d $_ } @{ $classic || [] }) {
-    foreach my $t (sort keys %drawn) {
-      next unless -f dir($c)->file($t);
-      next if grep { -f dir($_)->file($t) } @{ $overrides || [] };
-      push @found, [ "$c", $t ];
-    }
-  }
-  return sort { $a->[0] cmp $b->[0] or $a->[1] cmp $b->[1] } @found;
-}
-
-=head2 setup_web_uis( \@template_paths )
+=head2 setup_web_uis()
 
 Run once, after the web plugins and the site's C<template_paths> are known:
-finds each interface's overrides, puts the overlay in front of the template
-engine's C<INCLUDE_PATH>, and says which classic overrides an interface does
-not use.
+finds each declared interface's directories, drops those that have none, puts
+the overlay in front of the template engine's C<INCLUDE_PATH>, and says which
+classic overrides an interface does not use. C<netdisco-do checksitelocal>
+says the same for the site's files alone.
 
 =cut
 
 sub setup_web_uis {
-  my $site = shift || [];
+  my @site  = site_local_paths();
   my @roots = @{ setting('_plugin_template_roots') || [] };
+  my $labels = setting('_web_ui_labels') || {};
 
-  foreach my $ui (grep { defined $_->{views} } values %UI) {
+  foreach my $ui (grep { $_->{name} ne 'classic' } values %UI) {
     my $name = $ui->{name};
-    $ui->{overrides} = [ ui_dirs_for($name, @$site),
-                         grep { -d $_ } map { dir($_, "views-$name")->stringify } @roots ];
+    $ui->{$_} = $labels->{$name}->{$_}
+      for grep { defined $labels->{$name}->{$_} } qw/switch_label switch_title/;
+
+    $ui->{overrides} = [ ui_dirs_for($name, @site, @roots) ];
+    $ui->{views} = undef unless defined $ui->{views} and -d $ui->{views};
+
+    unless (defined $ui->{views} or scalar @{ $ui->{overrides} }) {
+      warning sprintf q{web_uis names '%s' but no views-%s directory was found beside share/views,}
+        . q{ in template_paths, in nd-site-local/share or beside a web plugin's views. The}
+        . q{ interface is left out.}, ($name) x 2;
+      delete $UI{$name};
+      next;
+    }
 
     # said once at startup rather than left to be found by a user of the
     # interface wondering where the site's change went
-    foreach my $s (ui_shadowed_overrides(
-        [ @$site, map { dir($_, 'views')->stringify } @roots ], $ui->{overrides}, $ui->{views})) {
-      warning sprintf
-        '%s overrides %s, which the %s interface draws itself: browsers using the'
-        . ' %s interface do not see this override. Copy it to a views-%s'
-        . ' directory beside it and adapt it to change the %s page too.',
-        $s->[0], $s->[1], ($name) x 4;
+    foreach my $f (scan_ui_shadowed({
+        name => $name, core => $ui->{views}, overrides => $ui->{overrides},
+        paths => [ @site, map { dir($_, 'views')->stringify } @roots ] })) {
+      warning sprintf '%s: %s', $f->{path}, $f->{advice};
     }
   }
 

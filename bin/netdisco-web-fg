@@ -44,6 +44,13 @@ my @compressible = qw(
   image/svg+xml
 );
 
+# the names web_uis lists, which are also the directory each serves its assets
+# from (invalid ones are reported and ignored when the app loads)
+my @web_uis = grep { defined and not ref and m/\A[a-z][a-z0-9_]*\z/ }
+              @{ setting('web_uis') || [] };
+my $ui_dirs = join '|', @web_uis;
+my $static_dirs = join '|', qw/javascripts css font images/, @web_uis;
+
 set plack_middlewares => [
   # Ahead of ReverseProxy, which overwrites REMOTE_ADDR from the forwarded
   # header; trusted_client_address() decides on the peer kept here.
@@ -72,16 +79,22 @@ set plack_middlewares => [
                        qr{^text/css}, qr{image}, qr{font}],
       expires => 'access plus 1 day',
   )],
+  # a site's own web interface keeps its scripts and styles in nd-site-local,
+  # in front of the shipped public directory so that it can override a file of
+  # an interface Netdisco ships
+  (
+    (setting('site_local_files') and @web_uis) ?
+      [ Static => (
+          path => qr{^/(?:$ui_dirs)/},
+          root => dir(($ENV{NETDISCO_HOME} || $ENV{HOME}), 'nd-site-local', 'share', 'public')->stringify,
+          pass_through => 1,
+      )]
+    : ()
+  ),
   [ Static => (
       # and each web interface's own directory, named as the interface is
-      # (web_uis: Foo serves /foo/, X::Mine /mine/)
-      path => do {
-        my @ui = map { (my $n = lc $_) =~ s/^.*:://; quotemeta $n }
-                 grep { defined and not ref }
-                 @{ setting('web_uis') || [] }, @{ setting('extra_web_uis') || [] };
-        my $dirs = join '|', qw/javascripts css font images/, @ui;
-        qr{^/(?:$dirs)/};
-      },
+      # (web_uis: mine serves /mine/)
+      path => qr{^/(?:$static_dirs)/},
       root => $ENV{DANCER_PUBLIC},
       pass_through => 1,
   )],

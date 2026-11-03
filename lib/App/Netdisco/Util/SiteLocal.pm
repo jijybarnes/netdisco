@@ -10,8 +10,8 @@ use Path::Class qw/dir file/;
 
 use base 'Exporter';
 our @EXPORT = ();
-our @EXPORT_OK = qw/ scan_site_local scan_shadowed_files
-                     site_local_rules site_local_paths /;
+our @EXPORT_OK = qw/ scan_site_local scan_shadowed_files scan_ui_shadowed
+                     ui_dirs_for site_local_rules site_local_paths /;
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 =head1 NAME
@@ -27,6 +27,9 @@ silently in the browser, which is why this exists: nothing else reports them.
 Detection only. This module never writes to a file and never logs.
 
 =cut
+
+# The release that brought web interfaces, for the findings that are not a removal.
+my $UI_RELEASE = '2.118000';
 
 # One row per shipped removal. A later rung adds a row here and nothing else.
 #
@@ -460,6 +463,82 @@ sub _file_contains {
   }
   close $fh;
   return 0;
+}
+
+=head2 ui_dirs_for( $name, @paths )
+
+Where templates for web interface C<$name> sit, for each of C<@paths> (a
+site's C<template_paths>, a plugin's root): beside a directory named F<views>
+(F<.../share/views> gives F<.../share/views-NAME>), else inside it. Only those
+that exist, each once, in the given order.
+
+=cut
+
+sub ui_dirs_for {
+  my ($name, @paths) = @_;
+  my %seen;
+  return grep { -d $_ and not $seen{$_}++ }
+         map  { my $d = dir($_);
+                ($d->basename eq 'views' ? $d->parent->subdir("views-$name")
+                                         : $d->subdir("views-$name"))->stringify }
+         grep { defined and length } @paths;
+}
+
+=head2 scan_ui_shadowed( \%args )
+
+Returns a finding for each classic template that a web interface draws itself
+and that the site (or a web plugin) overrides for the classic interface only:
+browsers using the interface do not see that override, because the interface's
+template is drawn from other data than the classic one.
+
+C<< $args{name} >> is the interface and C<< $args{core} >> the directory of
+the templates it ships (without one, nothing can be shadowed). C<<
+$args{paths} >> are the directories holding classic overrides: what
+C<site_local_paths> returns, and a plugin's F<views> directories when the web
+application asks. C<< $args{overrides} >> are the interface's own override
+directories; one that overrides the interface's template makes the classic
+override irrelevant. Left out, they are found with L</ui_dirs_for>.
+
+A finding has the shape L</scan_shadowed_files> returns, with C<rule> set to
+C<ui-shadowed>.
+
+=cut
+
+sub scan_ui_shadowed {
+  my $args = shift || {};
+  my ($name, $core) = @$args{qw/name core/};
+  return () unless defined $name and defined $core and -d $core;
+
+  my @classic = grep { defined and length and -d $_ } @{ $args->{paths} || [] };
+  my @overrides = @{ $args->{overrides} || [ ui_dirs_for($name, @classic) ] };
+
+  my %drawn;
+  dir($core)->recurse(callback => sub {
+    my $f = shift;
+    return if $f->is_dir or $f->basename !~ m/\.tt$/;
+    $drawn{ $f->relative($core)->as_foreign('Unix')->stringify } = 1;
+  });
+
+  my @findings;
+  foreach my $c (@classic) {
+    foreach my $t (sort keys %drawn) {
+      my $shadow = file($c, $t)->stringify;
+      next unless -f $shadow;
+      next if grep { -f file($_, $t) } @overrides;
+      push @findings, {
+        kind    => 'file',
+        path    => $shadow,
+        rule    => 'ui-shadowed',
+        release => $UI_RELEASE,
+        advice  => sprintf(q{the %s interface draws %s itself, so browsers using it do not }
+                         . q{see this override. Copy it to a views-%s directory beside it and }
+                         . q{adapt it to change that interface's page too.}, $name, $t, $name),
+      };
+    }
+  }
+
+  my @sorted = sort { $a->{path} cmp $b->{path} } @findings;
+  return @sorted;
 }
 
 =head2 site_local_rules

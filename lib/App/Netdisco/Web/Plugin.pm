@@ -24,6 +24,8 @@ set(
   # the paths plugins registered, last first, where each web interface looks
   # for the plugin's views-NAME (App::Netdisco::Web::UI)
   '_plugin_template_roots' => [],
+  # what a web interface's plugin said the switch to it should read
+  '_web_ui_labels' => {},
   '_report_order' => [qw/Device Port IP Node VLAN Network Wireless/, 'My Reports'],
 );
 
@@ -40,6 +42,18 @@ register 'register_template_path' => sub {
   unshift @{ config->{engines}->{netdisco_template_toolkit}->{INCLUDE_PATH} },
        dir($path, 'views')->stringify;
   unshift @{ setting('_plugin_template_roots') }, dir($path)->stringify;
+};
+
+register 'register_web_ui' => sub {
+  my ($self, $config) = plugin_args(@_);
+
+  if (ref $config ne ref {} or !$config->{name}) {
+      return error "bad config to register_web_ui";
+  }
+
+  setting('_web_ui_labels')->{ $config->{name} } = {
+    map {( $_ => $config->{$_} )} grep { defined $config->{$_} } qw/switch_label switch_title/
+  };
 };
 
 sub _register_include {
@@ -305,6 +319,15 @@ search tabs (with their sidebars), device details, CSS and JavaScript, and
 device port columns.
 
 =over 4
+
+=item *
+
+The plugin that serves a web interface (C<UI::Mine> for the C<mine> named in
+C<web_uis>) says what the classic account menu reads for the switch to it:
+
+    register_web_ui({ name => 'mine',
+                      switch_label => 'Try my interface',
+                      switch_title => 'Switch this browser to my interface' });
 
 =item *
 
