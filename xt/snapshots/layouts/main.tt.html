@@ -140,11 +140,25 @@
         </a>
         <ul class="dropdown-menu">
           <li><a class="dropdown-item" href="" target="_blank">👉 Browse the API</a></li>
-          <li><form method="post" class="nd_inline-form nd_web-ui-switch" action="">
-  <input type="hidden" name="ui" value="modern">
-  <button type="submit" class="dropdown-item" title="Switch this browser to the new interface">Try the new interface</button>
-</form>
+<li><hr class="dropdown-divider"></li>
+<li><h6 class="dropdown-header">Interface</h6></li>
+<li>
+  <span class="dropdown-item-text fw-semibold" aria-current="true"><i class="fas fa-check fa-fw"></i> Classic UI</span>
 </li>
+<li>
+  <form method="post" class="nd_inline-form nd_web-ui-switch" action="">
+    <input type="hidden" name="ui" value="compact">
+    <button type="submit" class="dropdown-item" title="Switch this browser to the compact interface"><i class="fas fa-fw"></i> Compact UI</button>
+  </form>
+</li>
+<li>
+  <form method="post" class="nd_inline-form nd_web-ui-switch" action="">
+    <input type="hidden" name="ui" value="modern">
+    <button type="submit" class="dropdown-item" title="Switch this browser to the modern interface"><i class="fas fa-fw"></i> Modern UI</button>
+  </form>
+</li>
+<li><hr class="dropdown-divider"></li>
+
           <li><a class="dropdown-item" href="https://github.com/netdisco/netdisco/wiki/Configuration" target="_blank">⚙️ Configuration Reference</a></li>
           <li><a class="dropdown-item" href="https://github.com/sponsors/netdisco" target="_blank">💜 Become a Sponsor</a></li>
           <li><a class="dropdown-item" href="">Log Out</a></li>

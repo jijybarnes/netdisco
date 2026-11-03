@@ -7,7 +7,7 @@ use Test::More 0.88;
 use File::Temp ();
 use File::Spec::Functions 'catfile';
 
-use App::Netdisco::Web::UI qw/web_ui web_ui_names other_web_uis valid_web_ui web_ui_plugin_names safe_back_path back_from_referer/;
+use App::Netdisco::Web::UI qw/web_ui web_ui_names web_uis_for valid_web_ui web_ui_plugin_names safe_back_path back_from_referer/;
 use Dancer::Template::NetdiscoTemplateToolkit;
 
 # The interface is chosen by a cookie the browser sends, so everything that
@@ -25,13 +25,16 @@ foreach my $bad (undef, '', 'Modern', 'modern', 'modern ', '../modern', 'views-m
 ok !valid_web_ui(['classic']), 'validWebUi__array_ref__is_refused';
 
 # The classic interface is one among the others for a browser using one of
-# them, so it has its labels like any, and the list of those to move to is
-# every interface but the one in use.
-is web_ui('classic')->{short_label}, 'Classic UI', 'webUi__classic__has_a_short_label_for_a_top_bar';
+# them, so it has its labels like any, and the account menu lists every
+# interface with the one in use marked.
+is web_ui('classic')->{short_label}, 'Classic UI', 'webUi__classic__has_a_label_for_the_menu';
 is web_ui('classic')->{switch_title}, 'Switch this browser back to the classic interface',
   'webUi__classic__has_a_title_for_the_switch_back';
-is_deeply [ map { $_->{name} } other_web_uis('classic') ], [], 'otherWebUis__classic_alone_using_it__none_to_move_to';
-is_deeply [ map { $_->{name} } other_web_uis(undef) ], ['classic'], 'otherWebUis__no_current__everything';
+is_deeply [ map { "$_->{name}:$_->{current}" } web_uis_for('classic') ], ['classic:1'],
+  'webUisFor__classic_alone__just_itself_ticked';
+is_deeply [ map { "$_->{name}:$_->{current}" } web_uis_for(undef) ], ['classic:0'],
+  'webUisFor__no_current__nothing_ticked';
+
 # The plugin of an interface is loaded by a module name built from the interface
 # name, so a name that is not an interface name must build none.
 is_deeply [ web_ui_plugin_names('mine') ],
@@ -114,10 +117,12 @@ is $engine->view('device'), catfile("$classic", 'device.tt'),
   Dancer::set(views => '/nonexistent/share/views');
   Dancer::set(web_uis => [ 'zeta', 'alpha', 'mid' ]);
   App::Netdisco::Web::UI::load_web_uis();
-  is_deeply [ map { $_->{name} } other_web_uis('mid') ], [qw/classic alpha zeta/],
-    'otherWebUis__using_one_of_three__classic_first_then_by_name_never_itself';
-  is_deeply [ map { $_->{name} } other_web_uis('classic') ], [qw/alpha mid zeta/],
-    'otherWebUis__using_classic__the_others_by_name';
+  is_deeply [ map { "$_->{name}:$_->{current}" } web_uis_for('mid') ], [qw/classic:0 alpha:0 mid:1 zeta:0/],
+    'webUisFor__using_one_of_three__all_of_them_classic_first_then_by_name_it_ticked';
+  is_deeply [ map { "$_->{name}:$_->{current}" } web_uis_for('classic') ], [qw/classic:1 alpha:0 mid:0 zeta:0/],
+    'webUisFor__using_classic__all_of_them_classic_ticked';
+  is_deeply [ sort keys %{ (web_uis_for('mid'))[0] } ], [qw/current name short_label switch_title/],
+    'webUisFor__entry__only_what_a_menu_draws';
   is web_ui('zeta')->{short_label}, 'Zeta UI', 'webUi__declared_without_a_label__short_label_from_its_name';
 }
 

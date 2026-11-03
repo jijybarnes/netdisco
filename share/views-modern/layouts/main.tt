@@ -186,13 +186,6 @@
     </div>
   </div>
 
-  [%- # one button for each other interface, the classic one first: any interface
-      # can reach any other (App::Netdisco::Web::UI) -%]
-  [% FOREACH ui IN web_uis %]
-  [% SET ui_icon = (ui.name == 'classic') ? 'fa-clock-rotate-left' : 'fa-shuffle' %]
-  [% INCLUDE 'layouts/_web_ui_switch.tt' style = 'topbar' target = ui.name icon = ui_icon label = ui.short_label title = ui.switch_title %]
-  [% END %]
-
   <div class="dropdown">
     <button class="nd2-avatar" data-bs-toggle="dropdown" aria-expanded="false"
       title="[% session.logged_in_fullname || session.logged_in_user | html_entity %]"
@@ -208,8 +201,10 @@
     [% IF user_has_role('admin') %]
       <li><a class="dropdown-item" href="https://github.com/netdisco/netdisco/wiki/Configuration" target="_blank">Configuration Reference</a></li>
     [% END %]
+      [%- # the interfaces to choose from, bounded by dividers of its own -%]
+      [% INCLUDE 'layouts/_web_ui_menu.tt' %]
     [% IF NOT settings.no_auth %]
-      <li><hr class="dropdown-divider"></li>
+      [% IF web_uis.size < 2 %]<li><hr class="dropdown-divider"></li>[% END %]
       <li><a class="dropdown-item" href="[% uri_for('/logout') | none %]">Log Out</a></li>
     [% END %]
     </ul>

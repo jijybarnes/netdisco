@@ -66,7 +66,7 @@ Dancer::set(views => $saved_views);
 
 ok valid_web_ui('xtui'), 'loadWebUis__name_in_web_uis__now_valid';
 is_deeply [ web_ui_names() ], [ sort 'classic', 'xtui' ], 'webUiNames__classic_and_what_web_uis_names';
-is web_ui('xtui')->{switch_label}, 'Try the xtui interface', 'loadWebUis__no_label__a_default_for_the_classic_menu';
+is web_ui('xtui')->{short_label}, 'Xtui UI', 'loadWebUis__no_label__a_default_for_the_menu';
 
 my $site = File::Temp->newdir(CLEANUP => 1);
 make_path(catfile("$site", 'share', 'views'), catfile("$site", 'share', 'views-xtui'), catfile("$site", 'mine', 'views-xtui'));

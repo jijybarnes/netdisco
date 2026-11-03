@@ -63,7 +63,7 @@ is_deeply [ App::Netdisco::Web::UI::web_ui_names() ], [qw/classic mine/],
   'setupWebUis__views_dir_in_nd_site_local__declares_the_interface';
 
 my $mine = App::Netdisco::Web::UI::web_ui('mine');
-is $mine->{switch_label}, 'Try mine', 'setupWebUis__plugin_registered_labels__are_used';
+is $mine->{short_label}, 'Mine UI', 'setupWebUis__plugin_registered_label__is_used';
 is $mine->{switch_title}, 'Switch this browser to mine', 'setupWebUis__plugin_registered_title__is_used';
 ok !defined $mine->{views}, 'setupWebUis__nothing_shipped__the_site_dir_is_the_interface';
 is_deeply $mine->{overrides}, [ catdir("$home", 'nd-site-local', 'share', 'views-mine') ],

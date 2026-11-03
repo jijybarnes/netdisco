@@ -1,0 +1,27 @@
+[%# The account menu's section for moving this browser to another web
+    interface (App::Netdisco::Web::UI): a heading, then every interface by its
+    short label, the one in use ticked and the others each a button that posts
+    to /web_ui. Shared by every layout, so it lives with the classic views that
+    every interface falls back to, and nothing here depends on how many
+    interfaces there are. The same URL works in any interface, so the switch
+    returns to the page it was pressed on, which the route reads from the
+    Referer header rather than from a field here (see back_from_referer).
+    With the classic interface alone there is nothing to choose and nothing is
+    drawn. The section is bounded by dividers on both sides. -%]
+[% IF web_uis.size > 1 %]
+<li><hr class="dropdown-divider"></li>
+<li><h6 class="dropdown-header">Interface</h6></li>
+[% FOREACH ui IN web_uis %]
+<li>
+  [% IF ui.current %]
+  <span class="dropdown-item-text fw-semibold" aria-current="true"><i class="fas fa-check fa-fw"></i> [% ui.short_label | html_entity %]</span>
+  [% ELSE %]
+  <form method="post" class="nd_inline-form nd_web-ui-switch" action="[% uri_for('/web_ui') | none %]">
+    <input type="hidden" name="ui" value="[% ui.name | html_entity %]">
+    <button type="submit" class="dropdown-item" title="[% ui.switch_title | html_entity %]"><i class="fas fa-fw"></i> [% ui.short_label | html_entity %]</button>
+  </form>
+  [% END %]
+</li>
+[% END %]
+<li><hr class="dropdown-divider"></li>
+[% END %]

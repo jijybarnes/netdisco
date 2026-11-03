@@ -52,7 +52,7 @@ register 'register_web_ui' => sub {
   }
 
   setting('_web_ui_labels')->{ $config->{name} } = {
-    map {( $_ => $config->{$_} )} grep { defined $config->{$_} } qw/switch_label switch_title short_label/
+    map {( $_ => $config->{$_} )} grep { defined $config->{$_} } qw/switch_title short_label/
   };
 };
 
@@ -326,12 +326,12 @@ The plugin that serves a web interface (C<UI::Mine> for the C<mine> named in
 C<web_uis>) says what the classic account menu reads for the switch to it:
 
     register_web_ui({ name => 'mine',
-                      switch_label => 'Try my interface',
-                      switch_title => 'Switch this browser to my interface',
-                      short_label  => 'My UI' });
+                      short_label  => 'My UI',
+                      switch_title => 'Switch this browser to my interface' });
 
-C<short_label> is what a layout with little room (a top bar) writes for the
-switch; C<switch_label> is for the classic account menu.
+C<short_label> is what the account menu of every interface calls it (by
+default the name with a capital and C< UI>), C<switch_title> the tooltip of its
+item.
 
 =item *
 

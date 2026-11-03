@@ -13,8 +13,8 @@ use File::Temp ();
 # but does not turn on. What is pinned is that a browser gets the interface its
 # cookie names whatever the others, that compact is the classic page wrapped
 # (so a site's own layout in template_paths is the one it wraps), and that its
-# plugin and style sheet are there. Which interface can reach which is in xt/503
-# (modern's top bar) and xt/500 (the list).
+# plugin and style sheet are there. What the account menu offers is in xt/500
+# (the list), xt/503 (modern's menu) and xt/40 (the classic one).
 #
 # Through the login page, as in xt/501: it is rendered in the same main layout
 # and is the one page every browser sees.
@@ -52,12 +52,10 @@ BAIL_OUT("could not load $psgi: $@") unless $app;
 is_deeply [ App::Netdisco::Web::UI::web_ui_names() ], [qw/classic compact modern/],
   'setupWebUis__modern_and_compact_named__both_declared';
 ok $INC{'App/Netdisco/Web/Plugin/UI/Compact.pm'}, 'loadWebUis__compact__its_plugin_is_loaded';
-is App::Netdisco::Web::UI::web_ui('compact')->{switch_label}, 'Try the compact interface',
-  'setupWebUis__compact_plugin_labels__are_used';
 is App::Netdisco::Web::UI::web_ui('compact')->{short_label}, 'Compact UI',
-  'setupWebUis__compact_plugin_short_label__is_used';
-is_deeply [ map { $_->{name} } App::Netdisco::Web::UI::other_web_uis('compact') ], [qw/classic modern/],
-  'otherWebUis__using_compact__classic_and_modern_to_move_to';
+  'setupWebUis__compact_plugin_label__is_used';
+is_deeply [ map { "$_->{name}:$_->{current}" } App::Netdisco::Web::UI::web_uis_for('compact') ],
+  [qw/classic:0 compact:1 modern:0/], 'webUisFor__using_compact__all_three_compact_ticked';
 
 my $COMPACT = qr/<html [^>]*data-nd-ui="compact"/;
 my $MODERN  = qr/<html [^>]*data-nd-ui="modern"/;

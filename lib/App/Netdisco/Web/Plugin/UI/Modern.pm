@@ -50,8 +50,8 @@ That data, read from the database and normalized, for the modules above.
 
 register_web_ui({
   name         => 'modern',
-  switch_label => 'Try the new interface',
-  switch_title => 'Switch this browser to the new interface',
+  short_label  => 'Modern UI',
+  switch_title => 'Switch this browser to the modern interface',
 });
 
 use App::Netdisco::Web::Plugin::UI::Modern::Shell;

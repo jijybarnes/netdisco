@@ -11,7 +11,7 @@ use App::Netdisco::Util::SiteLocal qw/site_local_paths ui_dirs_for scan_ui_shado
 
 use base 'Exporter';
 our @EXPORT_OK = qw/
-  web_ui web_ui_names other_web_uis valid_web_ui current_web_ui
+  web_ui web_ui_names web_uis_for valid_web_ui current_web_ui
   ui_include_paths web_ui_plugin_names
   safe_back_path back_from_referer
 /;
@@ -65,16 +65,15 @@ lost harmlessly when the cookie is.
 
 use constant COOKIE => 'nd_web_ui';
 
-# name => { name, views, switch_label, switch_title, short_label, overrides }
+# name => { name, views, switch_title, short_label, overrides }
 #   views: the directory Netdisco ships for the interface, if it exists
 #   overrides: the site's and plugins' directories for it, first first
-#   switch_label, switch_title: the classic menu's item that moves to it
-#   short_label: the same for a layout's top bar, where room is short
+#   short_label: what the account menu calls the interface
+#   switch_title: the tooltip of the menu item that moves to it
 my %UI = (
   classic => {
     name         => 'classic',
     views        => undef,
-    switch_label => 'Back to the classic interface',
     switch_title => 'Switch this browser back to the classic interface',
     short_label  => 'Classic UI',
   },
@@ -94,20 +93,24 @@ sub web_ui { my $name = shift; return (defined $name and not ref $name) ? $UI{$n
 
 sub web_ui_names { return sort keys %UI }
 
-=head2 other_web_uis( $current )
+=head2 web_uis_for( $current )
 
-The interfaces a browser using C<$current> can move to: every one but that,
-the classic one first, then the others by name. The same list is what the
-classic menu and every other layout offer, so that any interface can reach any
-other whatever their number.
+Every interface a browser using C<$current> can choose between, itself
+included, the classic one first, then the others by name. Each is a hash with
+C<name>, C<short_label>, C<switch_title> and C<current>, true for C<$current>.
+This is what the account menu of every layout lists, so that any interface can
+reach any other whatever their number.
 
 =cut
 
-sub other_web_uis {
+sub web_uis_for {
   my $current = shift;
-  return map { $UI{$_} }
+  return map { my $ui = $UI{$_};
+               +{ name => $ui->{name}, short_label => $ui->{short_label},
+                  switch_title => $ui->{switch_title},
+                  current => ((defined $current and $_ eq $current) ? 1 : 0) } }
          sort { ($a ne 'classic') <=> ($b ne 'classic') or $a cmp $b }
-         grep { not (defined $current and $_ eq $current) } keys %UI;
+         keys %UI;
 }
 
 sub valid_web_ui {
@@ -154,7 +157,6 @@ sub load_web_uis {
     $UI{$name} ||= {
       name         => $name,
       views        => dir(setting('views'))->parent->subdir("views-$name")->stringify,
-      switch_label => "Try the $name interface",
       switch_title => "Switch this browser to the $name interface",
       short_label  => ucfirst($name) . ' UI',
       overrides    => [],
@@ -237,7 +239,7 @@ sub setup_web_uis {
   foreach my $ui (grep { $_->{name} ne 'classic' } values %UI) {
     my $name = $ui->{name};
     $ui->{$_} = $labels->{$name}->{$_}
-      for grep { defined $labels->{$name}->{$_} } qw/switch_label switch_title short_label/;
+      for grep { defined $labels->{$name}->{$_} } qw/switch_title short_label/;
 
     $ui->{overrides} = [ ui_dirs_for($name, @site, @roots) ];
     $ui->{views} = undef unless defined $ui->{views} and -d $ui->{views};
@@ -311,14 +313,12 @@ hook 'before' => sub {
   var(web_ui => (valid_web_ui($picked) ? $picked : setting('_default_web_ui')));
 };
 
-# web_uis: the other interfaces a layout can offer to switch to
+# web_uis: the interfaces a layout's account menu offers to choose between
 hook 'before_template' => sub {
   my $tokens = shift;
   $tokens->{web_ui} = current_web_ui();
   $tokens->{web_ui_names} = [ web_ui_names() ];
-  $tokens->{web_uis} = [ map {{ name => $_->{name}, switch_label => $_->{switch_label},
-                                switch_title => $_->{switch_title}, short_label => $_->{short_label} }}
-                         other_web_uis($tokens->{web_ui}) ];
+  $tokens->{web_uis} = [ web_uis_for($tokens->{web_ui}) ];
 };
 
 post '/web_ui' => require_login sub {

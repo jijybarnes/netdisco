@@ -10,7 +10,7 @@ use App::Netdisco::Web::Plugin;
 
 register_web_ui({
   name         => 'mine',
-  switch_label => 'Try mine',
+  short_label  => 'Mine UI',
   switch_title => 'Switch this browser to mine',
 });
 

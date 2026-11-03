@@ -30,9 +30,8 @@ wraps.
 
 register_web_ui({
   name         => 'compact',
-  switch_label => 'Try the compact interface',
-  switch_title => 'Switch this browser to the compact interface',
   short_label  => 'Compact UI',
+  switch_title => 'Switch this browser to the compact interface',
 });
 
 # The layout of this interface is F<layouts/main.tt> in F<views-compact>, so
