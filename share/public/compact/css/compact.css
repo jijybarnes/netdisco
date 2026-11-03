@@ -1,0 +1,46 @@
+/* The compact web interface: the classic pages, denser, with an accent so that
+   a browser using it is told apart at a glance. Everything is scoped to the
+   attribute the layout puts on <html>. Colours come from Bootstrap's own
+   variables so the light and dark themes both follow. */
+
+html[data-nd-ui="compact"] {
+  --bs-body-font-size: 0.8125rem;
+  --nd-compact-accent: #0d9488;
+}
+
+html[data-nd-ui="compact"] body {
+  border-top: 3px solid var(--nd-compact-accent);
+  line-height: 1.35;
+}
+
+html[data-nd-ui="compact"] .navbar {
+  --bs-navbar-padding-y: 0.15rem;
+  min-height: 0;
+}
+
+html[data-nd-ui="compact"] .table > :not(caption) > * > * {
+  padding: 0.15rem 0.4rem;
+}
+
+html[data-nd-ui="compact"] .form-control,
+html[data-nd-ui="compact"] .form-select,
+html[data-nd-ui="compact"] .btn {
+  --bs-btn-padding-y: 0.15rem;
+  --bs-btn-font-size: 0.8125rem;
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+  font-size: 0.8125rem;
+}
+
+html[data-nd-ui="compact"] .nav-link,
+html[data-nd-ui="compact"] .dropdown-item {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+}
+
+html[data-nd-ui="compact"] .btn-primary,
+html[data-nd-ui="compact"] .nav-pills .nav-link.active {
+  --bs-btn-bg: var(--nd-compact-accent);
+  --bs-btn-border-color: var(--nd-compact-accent);
+  --bs-nav-pills-link-active-bg: var(--nd-compact-accent);
+}

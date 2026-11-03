@@ -186,7 +186,12 @@
     </div>
   </div>
 
-  [% INCLUDE 'layouts/_web_ui_switch.tt' target = 'classic' %]
+  [%- # one button for each other interface, the classic one first: any interface
+      # can reach any other (App::Netdisco::Web::UI) -%]
+  [% FOREACH ui IN web_uis %]
+  [% SET ui_icon = (ui.name == 'classic') ? 'fa-clock-rotate-left' : 'fa-shuffle' %]
+  [% INCLUDE 'layouts/_web_ui_switch.tt' style = 'topbar' target = ui.name icon = ui_icon label = ui.short_label title = ui.switch_title %]
+  [% END %]
 
   <div class="dropdown">
     <button class="nd2-avatar" data-bs-toggle="dropdown" aria-expanded="false"

@@ -11,7 +11,7 @@ use App::Netdisco::Util::SiteLocal qw/site_local_paths ui_dirs_for scan_ui_shado
 
 use base 'Exporter';
 our @EXPORT_OK = qw/
-  web_ui web_ui_names valid_web_ui current_web_ui
+  web_ui web_ui_names other_web_uis valid_web_ui current_web_ui
   ui_include_paths web_ui_plugin_names
   safe_back_path back_from_referer
 /;
@@ -47,6 +47,11 @@ data; the core routes do not know about it. C<register_web_ui>, which
 L<App::Netdisco::Web::Plugin> provides, sets what the classic menu says for
 the switch to it.
 
+An interface may draw a page by wrapping the classic template of the same name
+instead of replacing it (a layout that adds a style sheet to the classic one);
+its template begins with a C<[%# wraps-classic> comment, and a site's override
+of the classic template is then the one wrapped.
+
 By convention an interface named C<mine> keeps its scripts and styles under
 F</mine/> in the public directory, F<share/public/mine> or, for a site,
 F<nd-site-local/share/public/mine>.
@@ -60,11 +65,19 @@ lost harmlessly when the cookie is.
 
 use constant COOKIE => 'nd_web_ui';
 
-# name => { name, views, switch_label, switch_title, overrides }
+# name => { name, views, switch_label, switch_title, short_label, overrides }
 #   views: the directory Netdisco ships for the interface, if it exists
 #   overrides: the site's and plugins' directories for it, first first
+#   switch_label, switch_title: the classic menu's item that moves to it
+#   short_label: the same for a layout's top bar, where room is short
 my %UI = (
-  classic => { name => 'classic', views => undef },
+  classic => {
+    name         => 'classic',
+    views        => undef,
+    switch_label => 'Back to the classic interface',
+    switch_title => 'Switch this browser back to the classic interface',
+    short_label  => 'Classic UI',
+  },
 );
 
 my $VALID_NAME = qr/\A[a-z][a-z0-9_]*\z/;
@@ -80,6 +93,22 @@ The interface declared under C<$name>, or C<undef>.
 sub web_ui { my $name = shift; return (defined $name and not ref $name) ? $UI{$name} : undef }
 
 sub web_ui_names { return sort keys %UI }
+
+=head2 other_web_uis( $current )
+
+The interfaces a browser using C<$current> can move to: every one but that,
+the classic one first, then the others by name. The same list is what the
+classic menu and every other layout offer, so that any interface can reach any
+other whatever their number.
+
+=cut
+
+sub other_web_uis {
+  my $current = shift;
+  return map { $UI{$_} }
+         sort { ($a ne 'classic') <=> ($b ne 'classic') or $a cmp $b }
+         grep { not (defined $current and $_ eq $current) } keys %UI;
+}
 
 sub valid_web_ui {
   my $name = shift;
@@ -127,6 +156,7 @@ sub load_web_uis {
       views        => dir(setting('views'))->parent->subdir("views-$name")->stringify,
       switch_label => "Try the $name interface",
       switch_title => "Switch this browser to the $name interface",
+      short_label  => ucfirst($name) . ' UI',
       overrides    => [],
     };
 
@@ -207,7 +237,7 @@ sub setup_web_uis {
   foreach my $ui (grep { $_->{name} ne 'classic' } values %UI) {
     my $name = $ui->{name};
     $ui->{$_} = $labels->{$name}->{$_}
-      for grep { defined $labels->{$name}->{$_} } qw/switch_label switch_title/;
+      for grep { defined $labels->{$name}->{$_} } qw/switch_label switch_title short_label/;
 
     $ui->{overrides} = [ ui_dirs_for($name, @site, @roots) ];
     $ui->{views} = undef unless defined $ui->{views} and -d $ui->{views};
@@ -287,8 +317,8 @@ hook 'before_template' => sub {
   $tokens->{web_ui} = current_web_ui();
   $tokens->{web_ui_names} = [ web_ui_names() ];
   $tokens->{web_uis} = [ map {{ name => $_->{name}, switch_label => $_->{switch_label},
-                                switch_title => $_->{switch_title} }}
-                         map { $UI{$_} } grep { $_ ne 'classic' } web_ui_names() ];
+                                switch_title => $_->{switch_title}, short_label => $_->{short_label} }}
+                         other_web_uis($tokens->{web_ui}) ];
 };
 
 post '/web_ui' => require_login sub {

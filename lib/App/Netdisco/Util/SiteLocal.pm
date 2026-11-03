@@ -499,6 +499,11 @@ application asks. C<< $args{overrides} >> are the interface's own override
 directories; one that overrides the interface's template makes the classic
 override irrelevant. Left out, they are found with L</ui_dirs_for>.
 
+An interface template that wraps the classic one (it renders the classic
+template of the same name and adds to it) says so with a template comment
+containing C<wraps-classic>, as the compact interface's layout does. A classic
+override of such a template is used by the interface, so it is not reported.
+
 A finding has the shape L</scan_shadowed_files> returns, with C<rule> set to
 C<ui-shadowed>.
 
@@ -516,6 +521,7 @@ sub scan_ui_shadowed {
   dir($core)->recurse(callback => sub {
     my $f = shift;
     return if $f->is_dir or $f->basename !~ m/\.tt$/;
+    return if _file_contains($f->stringify, qr/\[%#\s*wraps-classic\b/);
     $drawn{ $f->relative($core)->as_foreign('Unix')->stringify } = 1;
   });
 

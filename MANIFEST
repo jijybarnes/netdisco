@@ -248,6 +248,7 @@ lib/App/Netdisco/Web/Plugin/Search/Device.pm
 lib/App/Netdisco/Web/Plugin/Search/Node.pm
 lib/App/Netdisco/Web/Plugin/Search/Port.pm
 lib/App/Netdisco/Web/Plugin/Search/VLAN.pm
+lib/App/Netdisco/Web/Plugin/UI/Compact.pm
 lib/App/Netdisco/Web/Plugin/UI/Modern.pm
 lib/App/Netdisco/Web/Plugin/UI/Modern/Data.pm
 lib/App/Netdisco/Web/Plugin/UI/Modern/Data/Device.pm
@@ -367,6 +368,7 @@ share/contrib/raddb/dictionary.wimax
 share/contrib/raddb/dictionary.xtradius
 share/environments/deployment.yml
 share/public/500.html
+share/public/compact/css/compact.css
 share/public/css/awesome-bootstrap-checkbox.css
 share/public/css/bootstrap-toggle.min.css
 share/public/css/bootstrap-tree.css
@@ -575,6 +577,7 @@ share/schema_versions/App-Netdisco-DB-96-97-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-97-98-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-98-99-PostgreSQL.sql
 share/schema_versions/App-Netdisco-DB-99-100-PostgreSQL.sql
+share/views-compact/layouts/main.tt
 share/views-modern/ajax/device/details.tt
 share/views-modern/ajax/device/modules.tt
 share/views-modern/ajax/device/ports.tt
@@ -837,6 +840,7 @@ xt/51-updated-device-hook.t
 xt/52-token-acl-auth.t
 xt/520-modern-web-ui-app.t
 xt/521-modern-web-ui-none.t
+xt/522-web-ui-compact.t
 xt/53-ports-csv-arity.t
 xt/54-ports-node-stitch.t
 xt/55-ports-search-shadow.t

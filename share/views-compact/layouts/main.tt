@@ -1,0 +1,19 @@
+[%# wraps-classic
+    The compact interface's layout is the classic one, wrapped: the classic
+    page is rendered as it would be without this interface, and the compact
+    mark and style sheet are added to it. So the navbar, the scripts and the
+    body attributes netdisco.js reads are the classic ones, and a change to the
+    classic layout, or a site's own layout in template_paths, reaches this
+    interface with nothing here to keep in step.
+
+    compact_base_layout is that classic layout's path, given by the web plugin
+    UI::Compact (App::Netdisco::Web::Plugin::UI::Compact): it is not looked up
+    here as layouts/main.tt, which is this very file from this interface.
+
+    The first line says that a classic override of this layout, a site's, is
+    used by this interface: it is not reported as one the interface ignores
+    (App::Netdisco::Util::SiteLocal, scan_ui_shadowed). -%]
+[% compact_head = BLOCK %]<link rel="stylesheet" href="[% uri_base | none %]/compact/css/compact.css?v=[% asset_version | none %]"/>
+</head>[% END %]
+[% compact_page = PROCESS $compact_base_layout %]
+[% compact_page.replace('<html\b', '<html data-nd-ui="compact"').replace('</head>', compact_head) | none %]

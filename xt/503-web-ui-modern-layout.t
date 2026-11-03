@@ -8,8 +8,8 @@ use Template::AutoFilter;
 
 # xt/141 renders the modern layout through the app, but only signed out: the
 # signed-in half needs a session the DBIC auth provider cannot give a test (see
-# xt/36). That half is the rail, the menus and the switch back to classic, so it
-# is rendered here directly, with the overlay in front of share/views exactly
+# xt/36). That half is the rail, the menus and the switch to the other
+# interfaces, so it is rendered here directly, with the overlay in front of share/views exactly
 # as the app arranges it.
 
 my $tt = Template::AutoFilter->new({
@@ -37,6 +37,15 @@ my $stash = {
   nd2_crumbs => [ { label => 'Reports' }, { label => 'Port' }, { label => 'Mismatched <Duplex>' } ],
   request   => { request_uri => '/device?q=10.0.0.1&tab=ports' },
   uri_base  => '',
+  web_ui    => 'modern',
+  # what App::Netdisco::Web::UI hands over for a browser using modern when
+  # compact is turned on too: every other interface, the classic one first
+  web_uis   => [
+    { name => 'classic', short_label => 'Classic UI', switch_label => 'Back to the classic interface',
+      switch_title => 'Switch this browser back to the classic interface' },
+    { name => 'compact', short_label => 'Compact UI', switch_label => 'Try the compact interface',
+      switch_title => 'Switch this browser to the compact interface' },
+  ],
   uri_for   => sub { $_[0] },
   user_has_role => sub { $roles{ $_[0] } },
   settings  => {
@@ -84,8 +93,23 @@ like $html, qr{action="/admin/discoverall"}, 'modernLayout__admin__gets_the_run_
 like $html, qr{href="/admin/users\?firstsearch=on">User Management</a>}, 'modernLayout__admin__lists_the_admin_tasks';
 
 like $html, qr{name="ui" value="classic"}, 'modernLayout__switch__targets_the_classic_interface';
+like $html, qr{name="ui" value="classic">\s*<button type="submit" class="nd2-topbar-btn" title="Switch this browser back to the classic interface">\s*<i class="fas fa-clock-rotate-left"></i><span class="nd2-hide-sm">Classic UI</span>}s,
+  'modernLayout__switch_to_classic__is_the_top_bar_button_it_always_was';
+like $html, qr{name="ui" value="compact">\s*<button type="submit" class="nd2-topbar-btn" title="Switch this browser to the compact interface">\s*<i class="fas fa-shuffle"></i><span class="nd2-hide-sm">Compact UI</span>}s,
+  'modernLayout__switch_to_another_interface__is_offered_beside_classic';
+ok index($html, 'value="classic"') < index($html, 'value="compact"'),
+  'modernLayout__switches__classic_first';
+unlike $html, qr{name="ui" value="modern"}, 'modernLayout__switches__never_to_the_interface_in_use';
 # the route returns to the Referer; a field would echo the request URI (xt/76)
 unlike $html, qr{/device\?q=10\.0\.0\.1}, 'modernLayout__switch__does_not_echo_the_request_uri';
+
+# modern and classic alone: the switch is the single button it was
+{
+  my $two = '';
+  $tt->process('layouts/main.tt', { %$stash, web_uis => [ $stash->{web_uis}[0] ] }, \$two) or die $tt->error;
+  is scalar(() = $two =~ m{name="ui" value="}g), 1, 'modernLayout__switches__two_interfaces_one_button';
+  unlike $two, qr{value="compact"}, 'modernLayout__switches__no_other_interface_none_offered';
+}
 
 like $html, qr{data-nd-role="admin"[^>]*>\s*JA\s*</button>}s, 'modernLayout__avatar__shows_two_initials_and_the_role';
 

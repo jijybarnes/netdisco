@@ -52,8 +52,9 @@ web_home: '/inventory'
 web_theme: auto
 default_web_ui: classic
 # names of web interfaces other than the classic one, found as views-NAME
-# (see App::Netdisco::Web::UI). The modern one is bundled; remove it to leave
-# it out entirely.
+# (see App::Netdisco::Web::UI). The modern one is enabled; remove it to leave
+# it out entirely. The compact one is shipped too, and is turned on by adding
+# it: web_uis: [modern, compact]
 web_uis:
   - modern
 web_plugins:

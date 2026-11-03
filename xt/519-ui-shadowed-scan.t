@@ -56,6 +56,14 @@ is $first->{kind}, 'file', 'scanUiShadowed__finding__is_a_file_finding';
 ok $first->{release}, 'scanUiShadowed__finding__cites_a_release';
 like $first->{advice}, qr/mine.*device\.tt.*views-mine/s, 'scanUiShadowed__finding__names_the_interface_template_and_directory';
 
+# an interface template that wraps the classic one uses a classic override of it
+open my $wrap, '>', catfile($core, 'layouts', 'main.tt') or die $!;
+print $wrap "[%# wraps-classic\n   renders the classic layout and adds to it -%]\n";
+close $wrap;
+is_deeply [ map { $_->{path} } scan_ui_shadowed({ name => 'mine', core => $core, paths => [ $views ] }) ],
+  [ catfile($views, 'device.tt') ],
+  'scanUiShadowed__interface_template_that_wraps_the_classic_one__its_override_is_not_reported';
+
 is_deeply [ scan_ui_shadowed({ name => 'mine', core => undef, paths => [ $views ] }) ], [],
   'scanUiShadowed__interface_with_nothing_shipped__finds_nothing';
 is_deeply [ scan_ui_shadowed({ name => 'mine', core => $core, paths => [ "$root/nowhere" ] }) ], [],
