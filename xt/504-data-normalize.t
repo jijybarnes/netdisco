@@ -9,7 +9,7 @@ use Scalar::Util 'blessed';
 
 use App::Netdisco::Web::Plugin::UI::Modern::Data qw/speed_to_bps layers_list iso8601_sql json_bool/;
 use App::Netdisco::Web::Plugin::UI::Modern::Data::Device 'normalize_device';
-use App::Netdisco::Web::Plugin::UI::Modern::Data::Ports qw/port_status normalize_port normalize_node normalize_control
+use App::Netdisco::Web::Plugin::UI::Modern::Data::Ports qw/port_status normalize_port normalize_hardware normalize_node normalize_control
                                        normalize_vlan normalize_log_entry free_interval/;
 
 # The v2 shapes are the contract both the API and the modern interface read,
@@ -106,8 +106,19 @@ is_deeply [ sort keys %$port ], [ sort qw/
   error_disable_cause stp_state speed speed_bps speed_admin duplex duplex_admin
   native_vlan pvid vlans is_uplink is_master slave_of has_subinterfaces
   last_change_at poe neighbor node_count last_node control tags custom_fields
-  nac is_free ssids last_comment
+  nac is_free ssids last_comment hardware
 / ], 'normalizePort__fields__are_the_documented_set';
+
+# where a port sits in the device: null when nothing placed it
+is $port->{hardware}, undef, 'normalizePort__not_placed__hardware_null';
+is_deeply normalize_port({ port => 'x' }, { hardware => { unit => '2', module => 2060,
+    transceiver => { description => 'SFP', model => '', serial => 'S1', extra => 'x' } } })->{hardware},
+  { unit => 2, module => 2060, transceiver => { description => 'SFP', model => undef, serial => 'S1' } },
+  'normalizePort__placed__unit_module_and_transceiver_by_their_documented_fields';
+is_deeply normalize_hardware({ unit => 3, module => undef, transceiver => undef }),
+  { unit => 3, module => undef, transceiver => undef }, 'normalizeHardware__unit_only__the_rest_null';
+is normalize_hardware(undef), undef, 'normalizeHardware__nothing__null';
+is normalize_hardware('x'), undef, 'normalizeHardware__not_a_hash__null';
 
 is $port->{is_free}, undef, 'normalizePort__free_not_asked__null_not_false';
 is_json_bool normalize_port({ port => 'x', is_free => 1 })->{is_free}, 1, 'normalizePort__free_asked__a_boolean';

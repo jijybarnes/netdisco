@@ -67,9 +67,24 @@ export function portTiles(p, vlans = []) {
   ].map((t) => ({ ...t, value: t.value == null ? '—' : t.value }));
 }
 
+// Where the port sits in the device and what is plugged into it, as the server
+// worked it out from the entity tree (a port's `hardware`, and the units).
+export function hardwareRows(p, units = []) {
+  const h = p.hardware;
+  if (!h) return [];
+  const unit = h.unit != null ? units.find((u) => u.number === h.unit) : null;
+  const mod = unit && h.module != null ? (unit.modules || []).find((m) => m.id === h.module) : null;
+  const t = h.transceiver;
+  return [
+    ['Unit', unit ? [unit.label, unit.model].filter(Boolean).join(' · ') : (h.unit != null ? `Unit ${h.unit}` : null)],
+    ['Module', mod ? [mod.label, mod.model].filter(Boolean).join(' · ') : null],
+    ['Transceiver', t ? [t.description || t.model, t.model && t.description ? t.model : null, t.serial && `S/N ${t.serial}`].filter(Boolean).join(' · ') : null],
+  ];
+}
+
 // The rest of what the port reports, below the controls: only what is known.
 // fields: the custom field columns the site has, as {name, label}.
-export function portDetails(p, { vlans = [], fields = [], macFormat } = {}) {
+export function portDetails(p, { vlans = [], fields = [], macFormat, units = [] } = {}) {
   const members = (p.vlans || []).map((n) => {
     const name = vlanName(vlans, n);
     return name ? `${n} ${name}` : String(n);
@@ -79,6 +94,7 @@ export function portDetails(p, { vlans = [], fields = [], macFormat } = {}) {
     ['VLAN membership', members.length ? members.join(', ') : null],
     ['Interface', p.descr && p.descr !== p.port ? p.descr : null],
     ['Type', text(p.type)],
+    ...hardwareRows(p, units),
     ['MAC', p.mac ? formatMac(p.mac, macFormat) : null],
     ['MTU', text(p.mtu)],
     ['Interface index', text(p.ifindex)],
@@ -245,7 +261,7 @@ function timeEl(doc, iso) {
 // the table's display choices the drawer follows ({ macFormat }).
 export function createDrawer({
   doc, win, fetchJson, post, toast, uriBase = '', apiBase, reasons = [], device, deviceName,
-  fields = [], view = () => ({}),
+  fields = [], view = () => ({}), units = () => [],
 }) {
   doc.querySelectorAll('.nd2-drawer, .nd2-scrim').forEach((n) => n.remove());
   doc.body.classList.remove('nd2-drawer-open');
@@ -517,7 +533,7 @@ export function createDrawer({
   }
 
   function details() {
-    const rows = portDetails(state.port, { vlans: state.vlans, macFormat: view().macFormat,
+    const rows = portDetails(state.port, { vlans: state.vlans, macFormat: view().macFormat, units: units(),
       fields: fields.filter((f) => !controlsAvailable(state.port).custom.includes(f.name)) });
     if (!rows.length) return null;
     const dl = el(doc, 'dl', { class: 'nd2-dr-facts' });

@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import {
   portTiles, portDetails, portUrl, controlsAvailable, validVlan, buildChanges, BOUNCE, formBody,
   submitChanges, pendingForPort, formatMac, vlanOptions, OTHER_VLAN, commentBody, validComment, logEntryText,
-  poeText,
+  poeText, hardwareRows,
 } from '../../share/public/modern/js/drawer.js';
 
 const port = (extra = {}) => ({
@@ -253,4 +253,31 @@ test('the modern scripts never build markup from a string', () => {
       .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
     assert.doesNotMatch(src, /\.(?:innerHTML|outerHTML)\b|insertAdjacentHTML|document\.write|\beval\(|new Function\(/, file);
   }
+});
+
+// ---------- where the port sits, and what is plugged into it ----------
+
+const units = [{ number: 2, label: 'Switch 2', model: 'C9300L-48P-4X',
+  modules: [{ id: 2109, label: 'Switch 2 Fixed Uplink Module 0', model: 'C9300-NM-4G' }] }];
+
+test('hardwareRows: unit, module and transceiver as the device describes them', () => {
+  const p = port({ hardware: { unit: 2, module: 2109, transceiver: { description: '10GBASE-SR', model: 'SFP-10G-SR', serial: 'M9AP' } } });
+  assert.deepEqual(hardwareRows(p, units), [
+    ['Unit', 'Switch 2 · C9300L-48P-4X'],
+    ['Module', 'Switch 2 Fixed Uplink Module 0 · C9300-NM-4G'],
+    ['Transceiver', '10GBASE-SR · SFP-10G-SR · S/N M9AP'],
+  ]);
+});
+
+test('hardwareRows: a unit the list lacks is still named by its number; nothing known is no row', () => {
+  assert.deepEqual(hardwareRows(port({ hardware: { unit: 5, module: null, transceiver: null } }), units), [['Unit', 'Unit 5'], ['Module', null], ['Transceiver', null]]);
+  assert.deepEqual(hardwareRows(port(), units), []);
+  assert.deepEqual(hardwareRows(port({ hardware: null }), units), []);
+});
+
+test('portDetails: the hardware rows are with the details, and the empty ones are dropped', () => {
+  const p = port({ type: 'ethernetCsmacd', hardware: { unit: 2, module: null, transceiver: null } });
+  const d = portDetails(p, { units });
+  assert.deepEqual(d.filter(([k]) => ['Unit', 'Module', 'Transceiver'].includes(k)), [['Unit', 'Switch 2 · C9300L-48P-4X']]);
+  assert.equal(portDetails(port({ type: 'x' }), {}).some(([k]) => k === 'Unit'), false, 'no inventory: the details are as they were');
 });

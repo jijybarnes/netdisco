@@ -16,6 +16,7 @@ our @EXPORT_OK = 'data_route';
 use App::Netdisco::Web::Plugin::UI::Modern::Data::Device qw/find_device device_summary/;
 use App::Netdisco::Web::Plugin::UI::Modern::Data::Ports qw/device_ports device_port port_nodes
                                        device_vlans port_log free_interval/;
+use App::Netdisco::Web::Plugin::UI::Modern::Data::Chassis 'device_stack';
 use App::Netdisco::Web::Plugin::UI::Modern::Data::Jobs 'my_jobs';
 use App::Netdisco::Web::Plugin::UI::Modern::Data::Devices 'list_devices';
 use App::Netdisco::Web::Plugin::UI::Modern::Data::Search 'quick_search';
@@ -74,6 +75,14 @@ name.
 =item C<GET /devices/{ip}/vlans>
 
 The VLANs it knows, by number, with their names.
+
+=item C<GET /devices/{ip}/units>
+
+The device's stack units, each with its model, serial and versions and its
+modules, as far as the entity tree and the port names tell (see
+L<App::Netdisco::Web::Plugin::UI::Modern::Data::Chassis>). C<meta.source> says
+where they come from: C<entities>, C<names> or C<none>. A port says which unit
+and module it is in, and what is plugged into it, as C<hardware>.
 
 =item C<GET /devices/{ip}/ports>
 
@@ -265,6 +274,16 @@ data_route(
     my $port = device_port(_schema, $device, _port_name($c->{port}),
       control => _control_for($device), custom_fields => _custom_fields_for(), free => _free());
     return { data => $port, meta => { device => $device->ip } };
+  },
+);
+
+data_route(
+  pattern  => '/devices/(?<ip>[^/]+)/units',
+  code => sub {
+    my $c = shift;
+    my $device = find_device(_schema, uri_unescape($c->{ip}));
+    my $stack = device_stack(_schema, $device);
+    return { data => $stack->{units}, meta => { device => $device->ip, count => scalar @{ $stack->{units} }, source => $stack->{source} } };
   },
 );
 

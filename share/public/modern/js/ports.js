@@ -26,6 +26,8 @@ const VIRTUAL_TYPES = /^(?:propVirtual|l2vlan|l3ipvlan|softwareLoopback|ieee8023
 export function isPhysical(p) {
   if (!p || !p.port) return false;
   if (p.type && VIRTUAL_TYPES.test(p.type)) return false;
+  // a stack that names its ports by unit and position (Avaya's 2.24) has no sub-interfaces to tell it from
+  if (/^\d+\.\d+$/.test(p.port)) return true;
   if (/\.\d+$/.test(p.port)) return false; // a subinterface
   if (/^(?:vlan|loopback|lo|port-channel|po|tunnel|null|nve|bdi|bvi)\d/i.test(p.port)) return false;
   return /\d$/.test(p.port);
@@ -58,6 +60,71 @@ export function faceplateLayout(ports) {
     const uplink = UPLINK_PREFIX.test(key) || list.every(({ port }) => (port.speed_bps || 0) >= 1e10);
     return { key, uplink, size: list.length, banks };
   });
+}
+
+// ---------- stack units, modules and what is plugged in ----------
+
+// The server puts each port in a stack unit and a module when the device's
+// entity tree and port names tell (a port's `hardware`, and the units from
+// GET /devices/{ip}/units). What the selector offers is one choice for each
+// unit that has a port to draw, and an "other" one for the ports no unit
+// holds. With one unit or none there is nothing to choose, and the one choice
+// is every port: the unit's, and the ones that are in no unit.
+export function panelChoices(units, ports) {
+  const drawn = (ports || []).filter(isPhysical);
+  const known = new Map((units || []).map((u) => [u.number, u]));
+  const placed = (p) => !!(p.hardware && p.hardware.unit != null && known.has(p.hardware.unit));
+  const list = [...known.values()]
+    .map((u) => ({ key: String(u.number), unit: u, ports: drawn.filter((p) => placed(p) && p.hardware.unit === u.number) }))
+    .filter((c) => c.ports.length);
+  if (list.length <= 1) {
+    return [{ key: list.length ? list[0].key : 'all', unit: list.length ? list[0].unit : null, ports: drawn }];
+  }
+  const loose = drawn.filter((p) => !placed(p));
+  if (loose.length) list.push({ key: 'other', unit: null, ports: loose });
+  return list;
+}
+
+// A choice's ports by the module they are in: the module with the most ports
+// first (the fixed ports), the others after it, and the ports in no module last.
+export function moduleGroups(choice) {
+  const mods = new Map((((choice.unit || {}).modules) || []).map((m) => [m.id, m]));
+  const groups = new Map();
+  choice.ports.forEach((p) => {
+    const id = p.hardware && p.hardware.module != null && mods.has(p.hardware.module) ? p.hardware.module : null;
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(p);
+  });
+  return [...groups.entries()]
+    .map(([id, ports]) => ({ module: id == null ? null : mods.get(id), ports }))
+    .sort((a, b) => (a.module == null) - (b.module == null)
+      || b.ports.length - a.ports.length || (a.module ? a.module.id - b.module.id : 0));
+}
+
+// What a module is called beside its ports: its name less the unit's, which
+// every module of a unit starts with ("Switch 1 Fixed Uplink Module 0").
+export function moduleCaption(module, unit) {
+  if (!module) return '';
+  const label = module.label || '';
+  const rest = unit && unit.label && label.startsWith(unit.label) ? label.slice(unit.label.length).trim() : label;
+  return rest || label;
+}
+
+// The unit's line above the panel: what the device says it is.
+export function unitHeading(unit) {
+  if (!unit) return '';
+  return [unit.label, unit.model, unit.serial && `S/N ${unit.serial}`, unit.sw_ver].filter(Boolean).join(' · ');
+}
+
+// What is plugged into a port, for a tooltip or the drawer.
+export function transceiverText(t) {
+  if (!t) return '';
+  return [t.description || t.model, t.serial && `S/N ${t.serial}`].filter(Boolean).join(' · ');
+}
+
+// How many of a choice's ports are shown, once the filter has had its say
+export function choiceCounts(choices, shown) {
+  return new Map(choices.map((c) => [c.key, c.ports.filter((p) => shown.has(p.port)).length]));
 }
 
 // The four most common native VLANs get the categorical slots, in order of
@@ -471,13 +538,14 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     ports: [], shown: [], chips: new Set(), q: root.getAttribute('data-nd2-filter') || '',
     sort: 'c_port', dir: 1, mode: prefs.mode || 'status', selected: null,
     hidden: false, faceplate: prefs.faceplate !== false, slots: new Map(),
+    units: [], unit: null, unitsLoaded: false,
     vlans: [], view: viewOptions(prefs.view, site),
     server: readServerCells(root.querySelector('template.nd2-server-cells')),
   };
   const drawer = createDrawer({
     doc, win, fetchJson, post, toast, uriBase, reasons, device, apiBase, fields,
     deviceName: root.getAttribute('data-nd2-device-name') || device,
-    view: () => state.view,
+    view: () => state.view, units: () => state.units,
   });
 
   const $ = (sel) => root.querySelector(sel);
@@ -503,6 +571,11 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     const p = state.ports.find((x) => x.port === port);
     if (!p) return undefined;
     state.selected = port;
+    // a port chosen from the table is shown on the panel, whichever unit it is in
+    if (from !== 'panel') {
+      const choice = panelChoices(state.units, state.ports).find((c) => c.ports.includes(p));
+      if (choice && choice.key !== state.unit) { state.unit = choice.key; drawPanel(); }
+    }
     mark();
     drawer.open(p, opener);
     if (from === 'panel') {
@@ -516,31 +589,62 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
     const shown = new Set(state.shown.map((p) => p.port));
     const filtering = state.q || state.chips.size;
     panel.replaceChildren();
-    const units = faceplateLayout(state.ports);
-    if (model && units.length) panel.appendChild(el(doc, 'span', { class: 'nd2-unit', text: model, 'aria-hidden': 'true' }));
-    if (!units.length) {
+    const choices = panelChoices(state.units, state.ports);
+    const choice = choices.find((c) => c.key === state.unit) || choices[0];
+
+    // the unit selector, when there is more than one to choose from
+    const chips = $('.nd2-fp-units');
+    chips.hidden = choices.length < 2;
+    const counts = choiceCounts(choices, shown);
+    chips.replaceChildren(...(choices.length < 2 ? [] : choices.map((c) => {
+      const b = el(doc, 'button', {
+        type: 'button', class: 'nd2-chip nd2-unit-chip', 'data-nd2-unit': c.key, 'aria-pressed': String(c === choice),
+        title: c.unit ? unitHeading(c.unit) : 'Ports that no unit holds',
+      }, [doc.createTextNode(c.unit ? c.unit.label : 'Other')]);
+      if (filtering) b.appendChild(el(doc, 'span', { class: 'nd2-chip-n', text: String(counts.get(c.key)) }));
+      b.addEventListener('click', () => { state.unit = c.key; drawPanel(); });
+      return b;
+    })));
+
+    const heading = $('.nd2-fp-unithead');
+    const headingText = choice && choice.unit ? unitHeading(choice.unit) : '';
+    heading.hidden = !headingText;
+    heading.textContent = headingText;
+
+    if (model && !headingText && choice.ports.length) panel.appendChild(el(doc, 'span', { class: 'nd2-unit', text: model, 'aria-hidden': 'true' }));
+    if (!choice.ports.length) {
       panel.appendChild(el(doc, 'p', { class: 'nd2-muted', text: 'No physical ports to draw.' }));
     }
-    units.forEach((u) => {
-      u.banks.forEach((bank) => {
-        const b = el(doc, 'div', { class: ['nd2-bank', u.uplink && 'nd2-bank-uplink'], role: 'group', 'aria-label': u.key });
-        bank.forEach(({ n, port: p }) => {
-          const look = portLook(p, state.mode, state.slots);
-          const label0 = portLabel(u.key, n, u.size);
-          const label = `${p.port}, ${STATUS_LABEL[p.status] || p.status}`
-            + (p.name ? `, ${p.name}` : '') + (p.native_vlan != null ? `, VLAN ${p.native_vlan}` : '')
-            + (p.poe && p.poe.power_mw ? `, ${(p.poe.power_mw / 1000).toFixed(1)} W` : '')
-            + (p.neighbor ? `, to ${p.neighbor.dns || p.neighbor.ip || p.neighbor.id}` : `, ${p.node_count || 0} nodes`);
-          const btn = el(doc, 'button', {
-            type: 'button', class: ['nd2-p', ...look.cls, filtering && !shown.has(p.port) && 'nd2-dim', state.selected === p.port && 'nd2-sel'],
-            'data-nd2-port': p.port, title: label, 'aria-label': label,
-            text: look.text != null && look.text !== '' ? look.text : label0,
+    const groups = moduleGroups(choice);
+    groups.forEach((group) => {
+      const into = groups.length > 1 && group.module ? el(doc, 'div', { class: 'nd2-modgroup', role: 'group', 'aria-label': moduleCaption(group.module, choice.unit) }) : panel;
+      if (into !== panel) {
+        into.appendChild(el(doc, 'span', { class: 'nd2-modcap', text: moduleCaption(group.module, choice.unit), title: [group.module.label, group.module.model].filter(Boolean).join(' · ') }));
+        panel.appendChild(into);
+      }
+      faceplateLayout(group.ports).forEach((u) => {
+        u.banks.forEach((bank) => {
+          const b = el(doc, 'div', { class: ['nd2-bank', u.uplink && 'nd2-bank-uplink'], role: 'group', 'aria-label': u.key });
+          bank.forEach(({ n, port: p }) => {
+            const look = portLook(p, state.mode, state.slots);
+            const label0 = portLabel(u.key, n, u.size);
+            const plugged = transceiverText(p.hardware && p.hardware.transceiver);
+            const label = `${p.port}, ${STATUS_LABEL[p.status] || p.status}`
+              + (p.name ? `, ${p.name}` : '') + (p.native_vlan != null ? `, VLAN ${p.native_vlan}` : '')
+              + (p.poe && p.poe.power_mw ? `, ${(p.poe.power_mw / 1000).toFixed(1)} W` : '')
+              + (p.neighbor ? `, to ${p.neighbor.dns || p.neighbor.ip || p.neighbor.id}` : `, ${p.node_count || 0} nodes`)
+              + (plugged ? `, plugged: ${plugged}` : '');
+            const btn = el(doc, 'button', {
+              type: 'button', class: ['nd2-p', ...look.cls, filtering && !shown.has(p.port) && 'nd2-dim', state.selected === p.port && 'nd2-sel'],
+              'data-nd2-port': p.port, title: label, 'aria-label': label,
+              text: look.text != null && look.text !== '' ? look.text : label0,
+            });
+            if (state.mode === 'status' && p.poe && p.poe.power_mw) btn.appendChild(el(doc, 'span', { class: 'nd2-bolt', 'aria-hidden': 'true', text: '⚡' }));
+            btn.addEventListener('click', () => select(p.port, 'panel', btn));
+            b.appendChild(btn);
           });
-          if (state.mode === 'status' && p.poe && p.poe.power_mw) btn.appendChild(el(doc, 'span', { class: 'nd2-bolt', 'aria-hidden': 'true', text: '⚡' }));
-          btn.addEventListener('click', () => select(p.port, 'panel', btn));
-          b.appendChild(btn);
+          into.appendChild(b);
         });
-        panel.appendChild(b);
       });
     });
     const legend = $('.nd2-fp-legend');
@@ -608,7 +712,12 @@ export function mount(root, { fetchJson, storage, uriBase = '', post, toast, win
       const q = new URLSearchParams({ free_age: String(state.view.freeAge), free_unit: state.view.freeUnit });
       if (state.hidden) q.set('include_hidden', '1');
       const src = `${root.getAttribute('data-nd2-src')}?${q}`;
-      const body = await fetchJson(src);
+      // the stack's units are asked for once; the ports are what changes
+      const [body, unitsBody] = await Promise.all([
+        fetchJson(src),
+        state.unitsLoaded ? null : fetchJson(`${apiBase}/devices/${encodeURIComponent(device)}/units`).catch(() => null),
+      ]);
+      if (unitsBody) { state.units = unitsBody.data || []; state.unitsLoaded = true; }
       state.ports = body.data || [];
       state.slots = vlanSlots(state.ports);
       refilter();

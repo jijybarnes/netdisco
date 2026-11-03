@@ -6,11 +6,12 @@ use warnings;
 use JSON::PP ();
 use App::Netdisco::Util::Permission 'acl_matches';
 use App::Netdisco::Web::Plugin::UI::Modern::Data qw/problem json_bool iso8601_sql speed_to_bps/;
+use App::Netdisco::Web::Plugin::UI::Modern::Data::Chassis 'device_stack';
 
 use base 'Exporter';
 our @EXPORT_OK = qw/
   device_ports device_port port_nodes
-  normalize_port normalize_node port_status normalize_control normalize_last_node
+  normalize_port normalize_hardware normalize_node port_status normalize_control normalize_last_node
   normalize_vlan normalize_log_entry device_vlans port_log free_interval
   hidden_device_ports
 /;
@@ -186,7 +187,8 @@ Pure: one port's columns (C<device_port>, plus what L</device_ports> joins in)
 to the API shape. C<%extra> carries what comes from other queries: C<vlans>,
 the port's VLAN numbers, C<node_count>, its active nodes, C<last_node>, the
 most recently seen of them, and C<control>, the port control decisions for the
-signed in user (see L</normalize_control>).
+signed in user (see L</normalize_control>). C<hardware> is where the port sits
+in the device (see L</normalize_hardware>).
 
 =cut
 
@@ -280,12 +282,35 @@ sub normalize_port {
     is_free       => (exists $c->{is_free} ? json_bool($c->{is_free}) : undef),
     ssids         => [ sort grep { defined and length } @{ $extra->{ssids} || [] } ],
     last_comment  => _str($extra->{last_comment}),
+    hardware      => normalize_hardware($extra->{hardware}),
 
     node_count    => 0 + ($extra->{node_count} || 0),
     last_node     => normalize_last_node($extra->{last_node}),
     control       => normalize_control($extra->{control}, $has_poe),
     tags          => [ @{ $c->{tags} || [] } ],
     custom_fields => (ref {} eq ref $custom ? $custom : {}),
+  };
+}
+
+=head2 normalize_hardware( \%placed )
+
+Pure: where a port sits in the device, as
+L<App::Netdisco::Web::Plugin::UI::Modern::Data::Chassis/stack_layout> placed it,
+to the API shape: C<unit> (the stack unit's number), C<module> (the id of the
+module it is in, as C<GET /devices/{ip}/units> lists it) and C<transceiver>
+(C<description>, C<model>, C<serial> of the part plugged in), each C<undef>
+when not known. C<undef> for a port that nothing placed.
+
+=cut
+
+sub normalize_hardware {
+  my $h = shift;
+  return undef unless ref {} eq ref $h;
+  my $t = $h->{transceiver};
+  return {
+    unit        => _int($h->{unit}),
+    module      => _int($h->{module}),
+    transceiver => (ref {} eq ref $t ? { map {( $_ => _str($t->{$_}) )} qw/description model serial/ } : undef),
   };
 }
 
@@ -443,12 +468,14 @@ sub device_ports {
   my $last     = _last_nodes_by_port($schema, $device);
   my $ssids    = _ssids_by_port($schema, $device);
   my $comments = _last_comments_by_port($schema, $device);
+  my $stack    = device_stack($schema, $device);
 
   return [ map {
     normalize_port({ $_->get_columns }, {
       vlans => $vlans->{ $_->port }, node_count => $counts->{ $_->port },
       last_node => $last->{ $_->port },
       ssids => $ssids->{ $_->port }, last_comment => $comments->{ $_->port },
+      hardware => $stack->{ports}{ $_->port },
       control => ($opts{control} ? $opts{control}->($_) : undef),
       custom_fields => ($opts{custom_fields} ? $opts{custom_fields}->($_) : undef),
     })
@@ -478,6 +505,7 @@ sub device_port {
     last_node => _last_nodes_by_port($schema, $device)->{ $name },
     ssids => _ssids_by_port($schema, $device, $name)->{ $name },
     last_comment => _last_comments_by_port($schema, $device, $name)->{ $name },
+    hardware => device_stack($schema, $device)->{ports}{ $name },
     control => ($opts{control} ? $opts{control}->($row) : undef),
     custom_fields => ($opts{custom_fields} ? $opts{custom_fields}->($row) : undef),
   });

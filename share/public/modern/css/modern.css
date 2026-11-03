@@ -1121,6 +1121,54 @@ th:not(:has(.nd2-th)) {
   font-size: 12.5px;
 }
 
+/* a stack's units to choose between, and the line saying what the one shown is.
+   One is always chosen, so unlike a filter chip the chosen one has no cross. */
+.nd2-fp-units[hidden], .nd2-fp-unithead[hidden] { display: none; }
+
+.nd2-unit-chip {
+  border-style: solid;
+}
+
+.nd2-unit-chip[aria-pressed="true"]::after {
+  content: none;
+}
+
+.nd2-fp-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.nd2-fp-unithead {
+  margin: 0 0 8px;
+  color: var(--nd2-muted);
+  font: 12px var(--nd2-mono);
+}
+
+/* a module's ports, with its name along its side */
+.nd2-modgroup {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid #3a4352;
+}
+
+.nd2-modcap {
+  flex: none;
+  color: #7d8796;
+  font: 10px var(--nd2-mono);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  /* a long name wraps into a second column rather than being cut */
+  max-height: calc(var(--nd2-port) * 2 + 4px);
+  line-height: 1.15;
+  text-align: center;
+  overflow: hidden;
+}
+
 /* the chassis' own name, along its side */
 .nd2-unit {
   flex: none;

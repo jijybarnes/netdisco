@@ -7,6 +7,7 @@ import {
   filterPorts, sortPorts, COLUMNS, usableColumns, visibleColumns, loadPrefs, savePrefs,
   portLabel, DEFAULT_COLUMNS, setTabCount, COLUMN_ORDER, COLUMN_LABEL, isFoldedSubinterface, customColumn,
   viewOptions, readServerCells, serverColumn, serverKey, columnDef,
+  panelChoices, moduleGroups, moduleCaption, unitHeading, transceiverText, choiceCounts,
 } from '../../share/public/modern/js/ports.js';
 
 const port = (name, extra = {}) => ({
@@ -25,6 +26,9 @@ test('isPhysical: ethernet ports yes; virtual, aggregate and sub-interfaces no',
   assert.equal(isPhysical(port('Po1', { type: 'ieee8023adLag' })), false);
   assert.equal(isPhysical(port('Port-channel10')), false);
   assert.equal(isPhysical(port('Gi1/0/1.100')), false);
+  assert.equal(isPhysical(port('2.24')), true, 'a stack that numbers its ports unit.port');
+  assert.equal(isPhysical(port('2.24', { type: 'l2vlan' })), false, 'unless the type says it is virtual');
+  assert.equal(isPhysical(port('1.2.3')), false, 'only the two numbers');
   assert.equal(isPhysical(port('Loopback0', { type: 'softwareLoopback' })), false);
   assert.equal(isPhysical(port('mgmt')), false, 'no number, nowhere to put it');
   assert.equal(isPhysical(null), false);
@@ -393,4 +397,80 @@ test('visibleColumns: a plugin column opens as the plugin set it', () => {
     { name: 'room', label: 'Room', default: false, custom: true }];
   assert.deepEqual(visibleColumns(offered, {}).map((c) => c.name), ['c_port', 'asset']);
   assert.deepEqual(visibleColumns(offered, { asset: false, room: true }).map((c) => c.name), ['c_port', 'room']);
+});
+
+// ---------- stack units, modules and transceivers on the panel ----------
+
+const placed = (name, unit, module = null, extra = {}) => port(name, { hardware: { unit, module, transceiver: null }, ...extra });
+const stack = [
+  { number: 1, label: 'Switch 1', model: 'C9300L-48P-4X', serial: 'S1', sw_ver: 'IOSXE 17.15',
+    modules: [{ id: 1060, label: 'Switch 1 Fixed Module 0', model: null }, { id: 1109, label: 'Switch 1 Fixed Uplink Module 0', model: null }] },
+  { number: 2, label: 'Switch 2', model: 'C9300L-48P-4X', serial: 'S2', sw_ver: null, modules: [] },
+];
+
+test('panelChoices: a unit each for the units that have ports, and an other for the ports in none', () => {
+  const ports = [placed('Gi1/0/1', 1, 1060), placed('Gi1/0/2', 1, 1060), placed('Gi2/0/1', 2),
+    port('GigabitEthernet0/0'), port('Vlan10', { type: 'propVirtual' })];
+  const c = panelChoices(stack, ports);
+  assert.deepEqual(c.map((x) => [x.key, x.ports.map((p) => p.port)]),
+    [['1', ['Gi1/0/1', 'Gi1/0/2']], ['2', ['Gi2/0/1']], ['other', ['GigabitEthernet0/0']]]);
+  assert.equal(c[0].unit.label, 'Switch 1');
+  assert.equal(c[2].unit, null);
+});
+
+test('panelChoices: nothing to choose with one unit or none, then every port is drawn', () => {
+  const ports = [placed('Gi1/0/1', 1), port('GigabitEthernet0/0')];
+  const one = panelChoices([stack[0]], ports);
+  assert.equal(one.length, 1);
+  assert.deepEqual(one[0].ports.map((p) => p.port), ['Gi1/0/1', 'GigabitEthernet0/0'], 'the port in no unit is drawn with the rest');
+  assert.equal(one[0].unit.label, 'Switch 1');
+
+  const none = panelChoices([], [port('Gi1/0/1'), port('Gi1/0/2')]);
+  assert.deepEqual(none.map((x) => [x.key, x.unit, x.ports.length]), [['all', null, 2]]);
+  assert.deepEqual(panelChoices(undefined, undefined).map((x) => x.ports.length), [0], 'no ports at all: still one empty choice to draw');
+});
+
+test('panelChoices: a unit with no port to draw is not offered', () => {
+  const c = panelChoices(stack, [placed('Gi1/0/1', 1), placed('Vlan5', 2, null, { type: 'propVirtual' })]);
+  assert.equal(c.length, 1, 'only unit 1 has a port: nothing to choose');
+  assert.equal(c[0].unit.number, 1);
+});
+
+test('moduleGroups: the module with most ports first, the ports in none last', () => {
+  const choice = { unit: stack[0], ports: [
+    placed('Te1/1/1', 1, 1109), placed('Te1/1/2', 1, 1109),
+    placed('Gi1/0/1', 1, 1060), placed('Gi1/0/2', 1, 1060), placed('Gi1/0/3', 1, 1060),
+    placed('AppGigabitEthernet1/0/1', 1, null),
+  ] };
+  const g = moduleGroups(choice);
+  assert.deepEqual(g.map((x) => [x.module && x.module.id, x.ports.length]), [[1060, 3], [1109, 2], [null, 1]]);
+});
+
+test('moduleGroups: a module the unit does not list is as good as none', () => {
+  const g = moduleGroups({ unit: stack[1], ports: [placed('Gi2/0/1', 2, 99)] });
+  assert.deepEqual(g.map((x) => [x.module, x.ports.length]), [[null, 1]]);
+  assert.deepEqual(moduleGroups({ unit: null, ports: [port('Gi1/0/1')] }).map((x) => x.ports.length), [1]);
+});
+
+test('moduleCaption: the name less the unit that every module of it starts with', () => {
+  assert.equal(moduleCaption(stack[0].modules[1], stack[0]), 'Fixed Uplink Module 0');
+  assert.equal(moduleCaption({ label: 'cascade' }, stack[0]), 'cascade');
+  assert.equal(moduleCaption({ label: 'Switch 1' }, stack[0]), 'Switch 1', 'a module named as its unit keeps its name');
+  assert.equal(moduleCaption(null, stack[0]), '');
+});
+
+test('unitHeading and transceiverText: what the device says, only what it says', () => {
+  assert.equal(unitHeading(stack[0]), 'Switch 1 · C9300L-48P-4X · S/N S1 · IOSXE 17.15');
+  assert.equal(unitHeading(stack[1]), 'Switch 2 · C9300L-48P-4X · S/N S2');
+  assert.equal(unitHeading(null), '');
+  assert.equal(transceiverText({ description: '10GBASE-SR SFP+', model: 'SFP-10G-SR', serial: 'M9AP' }), '10GBASE-SR SFP+ · S/N M9AP');
+  assert.equal(transceiverText({ description: null, model: 'SFP-10G-SR', serial: null }), 'SFP-10G-SR');
+  assert.equal(transceiverText(null), '');
+});
+
+test('choiceCounts: how many ports of each choice the filter leaves', () => {
+  const ports = [placed('Gi1/0/1', 1), placed('Gi1/0/2', 1), placed('Gi2/0/1', 2)];
+  const choices = panelChoices(stack, ports);
+  assert.deepEqual([...choiceCounts(choices, new Set(['Gi1/0/2', 'Gi2/0/1']))], [['1', 1], ['2', 1]]);
+  assert.deepEqual([...choiceCounts(choices, new Set())], [['1', 0], ['2', 0]]);
 });

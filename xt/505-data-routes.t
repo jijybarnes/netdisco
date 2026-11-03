@@ -70,7 +70,7 @@ subtest 'problem__raised_by_the_handler__becomes_an_error_document' => sub {
 
 subtest 'dataRoutes__every_resource__is_routed_for_the_browser' => sub {
   local $ENV{HTTP_X_REQUESTED_WITH} = 'XMLHttpRequest';
-  foreach my $path ('/devices', '/summary', '/search', '/me/jobs', '/devices/10.0.0.1', '/devices/10.0.0.1/vlans',
+  foreach my $path ('/devices', '/summary', '/search', '/me/jobs', '/devices/10.0.0.1', '/devices/10.0.0.1/vlans', '/devices/10.0.0.1/units',
                     '/devices/10.0.0.1/ports', '/devices/10.0.0.1/ports/Gi1/0/1',
                     '/devices/10.0.0.1/ports/Gi1/0/1/nodes', '/devices/10.0.0.1/ports/Gi1/0/1/log') {
     route_exists [ GET => "/ajax/data/v2$path" ], "GET /ajax/data/v2$path";

@@ -251,6 +251,7 @@ lib/App/Netdisco/Web/Plugin/Search/VLAN.pm
 lib/App/Netdisco/Web/Plugin/UI/Compact.pm
 lib/App/Netdisco/Web/Plugin/UI/Modern.pm
 lib/App/Netdisco/Web/Plugin/UI/Modern/Data.pm
+lib/App/Netdisco/Web/Plugin/UI/Modern/Data/Chassis.pm
 lib/App/Netdisco/Web/Plugin/UI/Modern/Data/Device.pm
 lib/App/Netdisco/Web/Plugin/UI/Modern/Data/Devices.pm
 lib/App/Netdisco/Web/Plugin/UI/Modern/Data/Jobs.pm
@@ -841,6 +842,7 @@ xt/52-token-acl-auth.t
 xt/520-modern-web-ui-app.t
 xt/521-modern-web-ui-none.t
 xt/522-web-ui-compact.t
+xt/523-chassis-layout.t
 xt/53-ports-csv-arity.t
 xt/54-ports-node-stitch.t
 xt/55-ports-search-shadow.t

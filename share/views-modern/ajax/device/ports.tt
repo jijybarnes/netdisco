@@ -91,9 +91,12 @@
       </span>
     </h3>
     <div class="nd2-fp" id="nd2-fp">
+      [%# a stack's units, to choose between, when the device's inventory tells them (ports.js) -%]
+      <div class="nd2-fp-units" role="group" aria-label="Stack unit" hidden></div>
+      <p class="nd2-fp-unithead" hidden></p>
       <div class="nd2-chassis"></div>
       <div class="nd2-fp-legend"></div>
-      <p class="nd2-fp-note nd2-muted">Laid out from the port names: physical ports only, two rows, odd numbers on top. Filters dim the ports they leave out.</p>
+      <p class="nd2-fp-note nd2-muted">Laid out from the device's inventory (stack units, modules) when it has one, else from the port names: physical ports only, two rows, odd numbers on top. Filters dim the ports they leave out.</p>
     </div>
   </section>
 
